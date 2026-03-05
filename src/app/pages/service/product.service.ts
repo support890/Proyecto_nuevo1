@@ -21,6 +21,7 @@ export interface ProductWithVariants {
     status: 'draft' | 'published' | 'archived';
     tags: string[];
     variants: ProductVariant[];
+    supplierId?: string;
     createdAt?: Date;
     updatedAt?: Date;
 }

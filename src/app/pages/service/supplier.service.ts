@@ -8,7 +8,7 @@ import { SupabaseService } from '../../services/supabase.service';
 export class SupplierService {
     private suppliers = signal<Supplier[]>([]);
     private loadingSignal = signal<boolean>(false);
-    
+
     loading = this.loadingSignal.asReadonly();
 
     constructor(private supabaseService: SupabaseService) {
@@ -39,7 +39,7 @@ export class SupplierService {
     async getSupplierById(id: string): Promise<Supplier | undefined> {
         try {
             const suppliers = await this.supabaseService.getSuppliers();
-            return suppliers?.find(s => s.id === id);
+            return suppliers?.find((s: any) => s.id === id);
         } catch (error) {
             console.error('Error getting supplier:', error);
             return undefined;
@@ -50,11 +50,11 @@ export class SupplierService {
         this.loadingSignal.set(true);
         try {
             const newSupplier = await this.supabaseService.createSupplier(supplier);
-            
+
             // Actualizar signal local
             const current = this.suppliers();
             this.suppliers.set([...current, newSupplier]);
-            
+
             return newSupplier;
         } catch (error) {
             console.error('Error creating supplier:', error);
@@ -68,7 +68,7 @@ export class SupplierService {
         this.loadingSignal.set(true);
         try {
             const updated = await this.supabaseService.updateSupplier(id, updatedSupplier);
-            
+
             // Actualizar signal local
             const current = this.suppliers();
             const index = current.findIndex(s => s.id === id);
@@ -77,7 +77,7 @@ export class SupplierService {
                 newSuppliers[index] = updated;
                 this.suppliers.set(newSuppliers);
             }
-            
+
             return updated;
         } catch (error) {
             console.error('Error updating supplier:', error);
@@ -91,11 +91,11 @@ export class SupplierService {
         this.loadingSignal.set(true);
         try {
             await this.supabaseService.deleteSupplier(id);
-            
+
             // Actualizar signal local
             const current = this.suppliers();
             this.suppliers.set(current.filter(s => s.id !== id));
-            
+
             return true;
         } catch (error) {
             console.error('Error deleting supplier:', error);
@@ -108,7 +108,7 @@ export class SupplierService {
     async toggleSupplierStatus(id: string): Promise<boolean> {
         const supplier = this.suppliers().find(s => s.id === id);
         if (!supplier) return false;
-        
+
         const updated = await this.updateSupplier(id, { ...supplier, active: !supplier.active });
         return updated !== null;
     }

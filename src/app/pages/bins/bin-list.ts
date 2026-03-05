@@ -78,8 +78,8 @@ export class BinList implements OnInit {
         });
     }
 
-    loadLocation(): void {
-        this.location = this.locationService.getLocationById(this.locationId);
+    async loadLocation(): Promise<void> {
+        this.location = await this.locationService.getLocationById(this.locationId);
         if (!this.location) {
             this.messageService.add({
                 severity: 'error',

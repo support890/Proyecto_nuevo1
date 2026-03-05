@@ -32,7 +32,7 @@ import { AuthService } from '../pages/service/auth.service';
     }
 
     .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #e11d48 0%, #9f1239 100%);
       color: white;
       padding: 1rem 2rem;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -93,7 +93,7 @@ export class MainLayoutComponent {
   constructor(
     public authService: AuthService,
     private router: Router
-  ) {}
+  ) { }
 
   logout(): void {
     this.authService.logout();

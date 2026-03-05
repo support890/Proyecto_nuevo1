@@ -137,7 +137,6 @@ export class SupplierList implements OnInit {
             });
         }
     }
-    }
 
     getStatusSeverity(active: boolean): string {
         return active ? 'success' : 'danger';

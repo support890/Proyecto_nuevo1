@@ -26,4 +26,5 @@ export interface LocationGeneratorParams {
     bayMax: number;
     levelMin: number;
     levelMax: number;
+    content?: string;
 }

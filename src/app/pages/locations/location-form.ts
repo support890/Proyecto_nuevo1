@@ -68,7 +68,7 @@ export class LocationForm implements OnInit {
         private router: Router,
         private route: ActivatedRoute,
         private messageService: MessageService
-    ) {}
+    ) { }
 
     ngOnInit(): void {
         this.route.params.subscribe(params => {
@@ -80,8 +80,8 @@ export class LocationForm implements OnInit {
         });
     }
 
-    loadLocation(id: string): void {
-        const location = this.locationService.getLocationById(id);
+    async loadLocation(id: string): Promise<void> {
+        const location = await this.locationService.getLocationById(id);
         if (location) {
             this.location = { ...location };
         } else {
@@ -95,12 +95,13 @@ export class LocationForm implements OnInit {
     }
 
     generateStorageName(): void {
-        if (!this.location.customName && this.location.type && this.location.row && 
-            this.location.bay && this.location.level) {
-            const code = parseInt(this.location.row) * 100 + 
-                        parseInt(this.location.bay) * 10 + 
-                        parseInt(this.location.level);
-            this.location.storageName = `${this.location.type}-${code}`;
+        const { type, row, bay, level } = this.location;
+        if (!this.location.customName && type && row !== '' && bay !== '' && level !== '') {
+            const r = parseInt(row.toString());
+            const b = parseInt(bay.toString());
+            const l = parseInt(level.toString());
+            const code = (isNaN(r) ? 0 : r) * 100 + (isNaN(b) ? 0 : b) * 10 + (isNaN(l) ? 0 : l);
+            this.location.storageName = `${type}-${code}`;
         }
     }
 
@@ -157,10 +158,11 @@ export class LocationForm implements OnInit {
             }
             setTimeout(() => this.goBack(), 1000);
         } catch (error) {
+            console.error('Error al guardar ubicación:', error);
             this.messageService.add({
                 severity: 'error',
                 summary: 'Error',
-                detail: 'Error al guardar la ubicación'
+                detail: error instanceof Error ? error.message : 'Error al guardar la ubicación'
             });
         }
     }
@@ -184,7 +186,14 @@ export class LocationForm implements OnInit {
             return false;
         }
 
-        if (!this.location.area || !this.location.row || !this.location.bay || !this.location.level) {
+        // Validar campos requeridos (evitando falsos negativos con el número 0)
+        const { area, row, bay, level } = this.location;
+        const isAreaValid = area !== undefined && area !== null && area !== '';
+        const isRowValid = row !== undefined && row !== null && row !== '';
+        const isBayValid = bay !== undefined && bay !== null && bay !== '';
+        const isLevelValid = level !== undefined && level !== null && level !== '';
+
+        if (!isAreaValid || !isRowValid || !isBayValid || !isLevelValid) {
             this.messageService.add({
                 severity: 'warn',
                 summary: 'Validación',

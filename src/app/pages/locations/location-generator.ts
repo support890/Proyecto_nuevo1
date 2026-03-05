@@ -41,7 +41,8 @@ export class LocationGenerator {
         bayMin: 1,
         bayMax: 1,
         levelMin: 1,
-        levelMax: 1
+        levelMax: 1,
+        content: ''
     };
 
     // Opciones para dropdowns
@@ -63,7 +64,7 @@ export class LocationGenerator {
         private locationService: LocationService,
         private router: Router,
         private messageService: MessageService
-    ) {}
+    ) { }
 
     get totalLocations(): number {
         const rows = (this.generatorParams.rowMax - this.generatorParams.rowMin + 1);
@@ -91,14 +92,14 @@ export class LocationGenerator {
 
         try {
             const generated = await this.locationService.generateLocations(this.generatorParams);
-            
+
             if (generated && generated.length > 0) {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Éxito',
                     detail: `${generated.length} ubicaciones creadas correctamente`
                 });
-                
+
                 setTimeout(() => this.goBack(), 1500);
             } else {
                 this.messageService.add({

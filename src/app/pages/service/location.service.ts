@@ -8,7 +8,7 @@ import { SupabaseService } from '../../services/supabase.service';
 export class LocationService {
     private locations = signal<Location[]>([]);
     private loadingSignal = signal<boolean>(false);
-    
+
     loading = this.loadingSignal.asReadonly();
 
     constructor(private supabaseService: SupabaseService) {
@@ -39,7 +39,7 @@ export class LocationService {
     async getLocationById(id: string): Promise<Location | undefined> {
         try {
             const locations = await this.supabaseService.getLocations();
-            return locations?.find(loc => loc.id === id);
+            return locations?.find((loc: any) => loc.id === id);
         } catch (error) {
             console.error('Error getting location:', error);
             return undefined;
@@ -50,11 +50,11 @@ export class LocationService {
         this.loadingSignal.set(true);
         try {
             const newLocation = await this.supabaseService.createLocation(location);
-            
+
             // Actualizar signal local
             const current = this.locations();
             this.locations.set([...current, newLocation]);
-            
+
             return newLocation;
         } catch (error) {
             console.error('Error creating location:', error);
@@ -68,7 +68,7 @@ export class LocationService {
         this.loadingSignal.set(true);
         try {
             const updated = await this.supabaseService.updateLocation(id, location);
-            
+
             // Actualizar signal local
             const current = this.locations();
             const index = current.findIndex(loc => loc.id === id);
@@ -77,7 +77,7 @@ export class LocationService {
                 newLocations[index] = updated;
                 this.locations.set(newLocations);
             }
-            
+
             return updated;
         } catch (error) {
             console.error('Error updating location:', error);
@@ -91,11 +91,11 @@ export class LocationService {
         this.loadingSignal.set(true);
         try {
             await this.supabaseService.deleteLocation(id);
-            
+
             // Actualizar signal local
             const current = this.locations();
             this.locations.set(current.filter(loc => loc.id !== id));
-            
+
             return true;
         } catch (error) {
             console.error('Error deleting location:', error);
@@ -108,7 +108,7 @@ export class LocationService {
     async toggleLocationStatus(id: string): Promise<boolean> {
         const location = this.locations().find(loc => loc.id === id);
         if (!location) return false;
-        
+
         const updated = await this.updateLocation(id, { ...location, active: !location.active });
         return updated !== null;
     }
@@ -118,11 +118,11 @@ export class LocationService {
         this.loadingSignal.set(true);
         try {
             const generatedLocations = await this.supabaseService.generateLocations(params);
-            
+
             // Actualizar signal local
             const current = this.locations();
             this.locations.set([...current, ...generatedLocations]);
-            
+
             return generatedLocations;
         } catch (error) {
             console.error('Error generating locations:', error);
@@ -135,7 +135,7 @@ export class LocationService {
     async updateBinQty(locationId: string, qty: number): Promise<boolean> {
         const location = this.locations().find(loc => loc.id === locationId);
         if (!location) return false;
-        
+
         const updated = await this.updateLocation(locationId, { ...location, binQty: qty });
         return updated !== null;
     }

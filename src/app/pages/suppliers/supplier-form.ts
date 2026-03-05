@@ -60,9 +60,9 @@ export class SupplierForm implements OnInit {
         }
     }
 
-    loadSupplier(): void {
+    async loadSupplier(): Promise<void> {
         if (this.supplierId) {
-            const supplier = this.supplierService.getSupplierById(this.supplierId);
+            const supplier = await this.supplierService.getSupplierById(this.supplierId);
             if (supplier) {
                 this.supplier = { ...supplier };
             } else {
@@ -113,10 +113,11 @@ export class SupplierForm implements OnInit {
                 this.goBack();
             }, 1000);
         } catch (error) {
+            console.error('Error al guardar proveedor:', error);
             this.messageService.add({
                 severity: 'error',
                 summary: 'Error',
-                detail: 'No se pudo guardar el proveedor',
+                detail: error instanceof Error ? error.message : 'No se pudo guardar el proveedor',
                 life: 3000
             });
         }

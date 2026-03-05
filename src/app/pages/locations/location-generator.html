@@ -192,6 +192,18 @@
                             appendTo="body">
                         </p-dropdown>
                     </div>
+
+                    <!-- Content Field -->
+                    <div class="col-span-12">
+                        <label class="block mb-2 font-semibold">
+                            Content
+                        </label>
+                        <input 
+                            pInputText 
+                            [(ngModel)]="generatorParams.content" 
+                            placeholder="Descripción del contenido para todas las ubicaciones (ej: RAPIDO, DDD)"
+                            class="w-full" />
+                    </div>
                 </div>
             </p-card>
         </div>

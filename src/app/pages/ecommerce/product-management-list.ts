@@ -43,14 +43,12 @@ import { MenuModule } from 'primeng/menu';
             <div class="flex justify-between items-start mb-6">
                 <div>
                     <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 m-0">Gestión de Productos</h2>
-                    <p class="text-surface-600 dark:text-surface-400 mt-2">Administra tu catálogo de productos y variantes</p>
                 </div>
                 <div class="flex gap-3 items-center">
                     <p-button 
                         label="Nuevo Producto" 
                         icon="pi pi-plus" 
-                        (onClick)="createNewProduct()"
-                        styleClass="p-button-success">
+                        (onClick)="createNewProduct()">
                     </p-button>
                     <p-iconfield>
                         <p-inputicon styleClass="pi pi-search" />
@@ -111,12 +109,14 @@ import { MenuModule } from 'primeng/menu';
                         <td>{{ product.code }}</td>
                         <td>
                             <div class="flex items-center gap-2">
-                                <img 
-                                    *ngIf="product.images && product.images.length > 0" 
-                                    [src]="product.images[0]" 
-                                    [alt]="product.name"
-                                    width="50" 
-                                    class="shadow-sm rounded" />
+                                <div class="w-12 h-12 flex-shrink-0 bg-surface-100 dark:bg-surface-800 rounded flex items-center justify-center overflow-hidden shadow-sm">
+                                    <img 
+                                        *ngIf="product.images && product.images.length > 0" 
+                                        [src]="product.images[0]" 
+                                        [alt]="product.name"
+                                        class="w-full h-full object-cover" />
+                                    <i *ngIf="!product.images || product.images.length === 0" class="pi pi-image text-surface-400"></i>
+                                </div>
                                 <span class="font-semibold">{{ product.name }}</span>
                             </div>
                         </td>
@@ -153,14 +153,10 @@ import { MenuModule } from 'primeng/menu';
                 <ng-template #emptymessage>
                     <tr>
                         <td colspan="9" class="text-center py-8">
-                            <i class="pi pi-inbox text-4xl text-surface-400 mb-4"></i>
-                            <p class="text-surface-600 dark:text-surface-400">No hay productos disponibles</p>
-                            <p-button 
-                                label="Crear Primer Producto" 
-                                icon="pi pi-plus" 
-                                (onClick)="createNewProduct()"
-                                styleClass="mt-4">
-                            </p-button>
+                            <div class="flex flex-col items-center gap-3">
+                                <i class="pi pi-inbox text-4xl text-gray-400"></i>
+                                <p class="text-gray-500">No se encontraron productos</p>
+                            </div>
                         </td>
                     </tr>
                 </ng-template>
@@ -220,7 +216,7 @@ export class ProductManagementList implements OnInit {
     variantsDialogVisible: boolean = false;
     selectedProduct: ProductWithVariants | null = null;
     searchValue: string = '';
-    
+
     menuItems: any[] = [];
 
     constructor(
@@ -229,7 +225,7 @@ export class ProductManagementList implements OnInit {
         private router: Router,
         private confirmationService: ConfirmationService,
         private messageService: MessageService
-    ) {}
+    ) { }
 
     ngOnInit(): void {
         this.loadProducts();
@@ -278,7 +274,7 @@ export class ProductManagementList implements OnInit {
 
     getSupplierName(supplierId: string | undefined): string {
         if (!supplierId) return '-';
-        const supplier = this.supplierService.getSupplierById(supplierId);
+        const supplier = this.supplierService.getAllSuppliers().find(s => s.id === supplierId);
         return supplier ? supplier.name : '-';
     }
 

@@ -42,11 +42,11 @@ export interface TabCloseEvent {
 export class LayoutService {
     _config: layoutConfig = {
         preset: 'Aura',
-        primary: 'emerald',
+        primary: 'rose',
         surface: null,
         darkTheme: false,
         menuMode: 'slim',
-        layoutTheme: 'colorScheme'
+        layoutTheme: 'primaryColor'
     };
 
     _state: LayoutState = {
@@ -155,7 +155,7 @@ export class LayoutService {
             .then(() => {
                 this.onTransitionEnd();
             })
-            .catch(() => {});
+            .catch(() => { });
     }
 
     toggleDarkMode(config?: layoutConfig): void {

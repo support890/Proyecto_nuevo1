@@ -113,27 +113,29 @@ import { DividerModule } from 'primeng/divider';
                                 <p-fileUpload
                                     name="images[]"
                                     [customUpload]="true"
-                                    (uploadHandler)="onImageUpload($event)"
+                                    (onSelect)="onImageSelect($event)"
                                     [multiple]="true"
                                     accept="image/*"
-                                    [maxFileSize]="1000000"
-                                    [showUploadButton]="true"
+                                    [maxFileSize]="5000000"
+                                    [showUploadButton]="false"
                                     [showCancelButton]="false"
+                                    [auto]="true"
                                     chooseLabel="Seleccionar Imágenes"
-                                    uploadLabel="Subir"
-                                    cancelLabel="Cancelar">
-                                    <ng-template #content let-files>
+                                    class="w-full">
+                                    <ng-template #content>
                                         <div class="flex flex-wrap gap-4 mt-4" *ngIf="product.images.length > 0">
-                                            <div *ngFor="let img of product.images; let i = index" class="relative">
-                                                <img [src]="img" class="w-32 h-32 object-cover rounded shadow" />
-                                                <p-button 
-                                                    icon="pi pi-times" 
-                                                    (onClick)="removeImage(i)"
-                                                    [rounded]="true"
-                                                    severity="danger"
-                                                    size="small"
-                                                    styleClass="absolute -top-2 -right-2">
-                                                </p-button>
+                                            <div *ngFor="let img of product.images; let i = index" class="relative group">
+                                                <img [src]="img" class="w-32 h-32 object-cover rounded-lg shadow-md border border-surface-200 dark:border-surface-700" />
+                                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                                                    <p-button 
+                                                        icon="pi pi-trash" 
+                                                        (onClick)="removeImage(i)"
+                                                        [rounded]="true"
+                                                        severity="danger"
+                                                        size="small"
+                                                        pTooltip="Eliminar imagen">
+                                                    </p-button>
+                                                </div>
                                             </div>
                                         </div>
                                     </ng-template>
@@ -291,8 +293,7 @@ import { DividerModule } from 'primeng/divider';
                             label="Guardar Producto" 
                             icon="pi pi-check"
                             (onClick)="saveProduct()"
-                            styleClass="w-full"
-                            severity="success">
+                            styleClass="w-full">
                         </p-button>
                         <p-button 
                             label="Cancelar" 
@@ -433,7 +434,7 @@ export class ProductForm implements OnInit {
         private router: Router,
         private route: ActivatedRoute,
         private messageService: MessageService
-    ) {}
+    ) { }
 
     ngOnInit(): void {
         this.loadSuppliers();
@@ -464,19 +465,30 @@ export class ProductForm implements OnInit {
         }
     }
 
-    onImageUpload(event: FileUploadHandlerEvent): void {
-        for (let file of event.files) {
+    onImageSelect(event: any): void {
+        const files = event.currentFiles || event.files;
+        if (!files || files.length === 0) return;
+
+        for (let file of files) {
             const reader = new FileReader();
             reader.onload = (e: any) => {
-                this.product.images.push(e.target.result);
+                const base64Image = e.target.result;
+                // Evitar duplicados si la imagen ya existe
+                if (!this.product.images.includes(base64Image)) {
+                    this.product.images.push(base64Image);
+                }
             };
             reader.readAsDataURL(file);
         }
-        this.messageService.add({
-            severity: 'success',
-            summary: 'Éxito',
-            detail: 'Imágenes cargadas correctamente'
-        });
+
+        // Limpiar la lista del componente para que no se queden ahí los nombres de archivo
+        if (event.originalEvent) {
+            this.messageService.add({
+                severity: 'info',
+                summary: 'Imágenes añadidas',
+                detail: `${files.length} imágenes procesadas`
+            });
+        }
     }
 
     removeImage(index: number): void {
@@ -587,7 +599,7 @@ export class ProductForm implements OnInit {
             this.messageService.add({
                 severity: 'error',
                 summary: 'Error',
-                detail: 'No se pudo guardar el producto'
+                detail: error instanceof Error ? error.message : 'No se pudo guardar el producto'
             });
         }
     }

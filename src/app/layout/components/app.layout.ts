@@ -3,17 +3,17 @@ import { CommonModule } from '@angular/common';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { AppTopbar } from './app.topbar';
-import { AppFooter } from './app.footer';
+
 import { LayoutService, TabCloseEvent } from '@/layout/service/layout.service';
 import { AppConfigurator } from './app.configurator';
 import { AppBreadcrumb } from './app.breadcrumb';
 import { AppMenu } from './app.menu';
-import {AppSidebar} from "./app.sidebar";
+import { AppSidebar } from "./app.sidebar";
 
 @Component({
     selector: 'app-layout',
     standalone: true,
-    imports: [CommonModule, AppTopbar, AppSidebar, RouterModule, AppFooter, AppConfigurator, AppBreadcrumb],
+    imports: [CommonModule, AppTopbar, AppSidebar, RouterModule, AppConfigurator, AppBreadcrumb],
     template: `
         <div class="layout-container" [ngClass]="containerClass">
             <div app-topbar></div>
@@ -23,7 +23,7 @@ import {AppSidebar} from "./app.sidebar";
                     <div class="layout-content-inner">
                         <nav app-breadcrumb></nav>
                         <router-outlet></router-outlet>
-                        <div app-footer></div>
+
                     </div>
                 </div>
             </div>

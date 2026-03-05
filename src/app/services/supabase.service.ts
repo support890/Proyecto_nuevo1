@@ -16,6 +16,57 @@ export class SupabaseService {
   }
 
   /**
+   * Convierte nombres de propiedades de camelCase a snake_case
+   * Excluye campos del sistema para evitar errores de actualización
+   */
+  private toSnakeCase(obj: any): any {
+    if (obj === null || obj === undefined || typeof obj !== 'object') {
+      return obj;
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.toSnakeCase(item));
+    }
+
+    // No procesar objetos Date directamente como objetos planos
+    if (obj instanceof Date) {
+      return obj.toISOString();
+    }
+
+    const snakeCaseObj: any = {};
+    Object.keys(obj).forEach(key => {
+      // Excluir campos que no deben actualizarse directamente o que causan errores
+      if (['id', 'createdAt', 'updatedAt', 'created_at', 'updated_at'].includes(key)) {
+        return;
+      }
+
+      const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+      snakeCaseObj[snakeKey] = this.toSnakeCase(obj[key]);
+    });
+    return snakeCaseObj;
+  }
+
+  /**
+   * Convierte nombres de propiedades de snake_case a camelCase
+   */
+  private toCamelCase(obj: any): any {
+    if (obj === null || obj === undefined || typeof obj !== 'object') {
+      return obj;
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.toCamelCase(item));
+    }
+
+    const camelCaseObj: any = {};
+    Object.keys(obj).forEach(key => {
+      const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+      camelCaseObj[camelKey] = this.toCamelCase(obj[key]);
+    });
+    return camelCaseObj;
+  }
+
+  /**
    * Obtiene el cliente de Supabase para operaciones personalizadas
    */
   getClient(): SupabaseClient {
@@ -134,7 +185,10 @@ export class SupabaseService {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data;
+
+    // Convertir a camelCase y agregar variants vacío a cada producto
+    const camelCaseData = this.toCamelCase(data);
+    return camelCaseData?.map((product: any) => ({ ...product, variants: product.variants || [] })) || [];
   }
 
   /**
@@ -148,36 +202,65 @@ export class SupabaseService {
       .single();
 
     if (error) throw error;
-    return data;
+
+    // Convertir a camelCase y agregar variants vacío
+    const camelCaseData = this.toCamelCase(data);
+    return { ...camelCaseData, variants: camelCaseData?.variants || [] };
   }
 
   /**
    * Crea un nuevo producto
    */
   async createProduct(product: any) {
+    const { variants, ...productData } = product;
+
+    // El nuevo toSnakeCase maneja la limpieza y remoción de campos del sistema
+    const snakeCaseProduct = this.toSnakeCase(productData);
+
+    console.log('Creando producto con datos:', snakeCaseProduct);
+
     const { data, error } = await this.supabase
       .from('products')
-      .insert([product])
+      .insert([snakeCaseProduct])
       .select()
       .single();
 
-    if (error) throw error;
-    return data;
+    if (error) {
+      console.error('Error de Supabase al crear producto:', error);
+      throw error;
+    }
+
+    const camelCaseData = this.toCamelCase(data);
+    return { ...camelCaseData, variants: variants || [] };
   }
 
   /**
    * Actualiza un producto existente
    */
   async updateProduct(id: string, updates: any) {
+    // Extraer variantes del objeto de actualización
+    const { variants, ...updateData } = updates;
+
+    // Convertir a snake_case y REMOVER el ID del cuerpo para evitar conflictos de llave primaria
+    const snakeCaseUpdates = this.toSnakeCase(updateData);
+
+    console.log('Actualizando producto ID:', id, 'con datos:', snakeCaseUpdates);
+
     const { data, error } = await this.supabase
       .from('products')
-      .update(updates)
+      .update(snakeCaseUpdates)
       .eq('id', id)
       .select()
       .single();
 
-    if (error) throw error;
-    return data;
+    if (error) {
+      console.error('Error de Supabase al actualizar producto:', error);
+      throw error;
+    }
+
+    // Sincronizar respuesta con camelCase y variants
+    const camelCaseData = this.toCamelCase(data);
+    return { ...camelCaseData, variants: variants || camelCaseData.variants || [] };
   }
 
   /**
@@ -207,36 +290,58 @@ export class SupabaseService {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data;
+    return this.toCamelCase(data);
   }
 
   /**
    * Crea un nuevo proveedor
    */
   async createSupplier(supplier: any) {
+    // Asegurar valores por defecto para campos opcionales
+    const supplierToInsert = {
+      ...supplier,
+      address: supplier.address || null,
+      city: supplier.city || null,
+      country: supplier.country || null,
+      website: supplier.website || null,
+      active: supplier.active !== undefined ? supplier.active : true
+    };
+
+    // Convertir a snake_case para Supabase
+    const snakeCaseSupplier = this.toSnakeCase(supplierToInsert);
+
     const { data, error } = await this.supabase
       .from('suppliers')
-      .insert([supplier])
+      .insert([snakeCaseSupplier])
       .select()
       .single();
 
-    if (error) throw error;
-    return data;
+    if (error) {
+      console.error('Error de Supabase al crear proveedor:', error);
+      throw error;
+    }
+    return this.toCamelCase(data);
   }
 
   /**
    * Actualiza un proveedor
    */
   async updateSupplier(id: string, updates: any) {
+    // Convertir a snake_case para Supabase
+    const snakeCaseUpdates = this.toSnakeCase(updates);
+
     const { data, error } = await this.supabase
       .from('suppliers')
-      .update(updates)
+      .update(snakeCaseUpdates)
       .eq('id', id)
       .select()
       .single();
 
-    if (error) throw error;
-    return data;
+    if (error) {
+      console.error('Error de Supabase al actualizar proveedor:', error);
+      throw error;
+    }
+    return this.toCamelCase(data);
   }
 
   /**
@@ -251,7 +356,7 @@ export class SupabaseService {
       .single();
 
     if (error) throw error;
-    return data;
+    return this.toCamelCase(data);
   }
 
   // ==================== UBICACIONES ====================
@@ -266,36 +371,57 @@ export class SupabaseService {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data;
+    return this.toCamelCase(data);
   }
 
   /**
    * Crea una nueva ubicación
    */
   async createLocation(location: any) {
+    // Asegurar valores por defecto para campos opcionales
+    const locationToInsert = {
+      ...location,
+      content: location.content || null,
+      customName: location.customName !== undefined ? location.customName : false,
+      active: location.active !== undefined ? location.active : true,
+      binQty: location.binQty || 0
+    };
+
+    // Convertir a snake_case para Supabase
+    const snakeCaseLocation = this.toSnakeCase(locationToInsert);
+
     const { data, error } = await this.supabase
       .from('locations')
-      .insert([location])
+      .insert([snakeCaseLocation])
       .select()
       .single();
 
-    if (error) throw error;
-    return data;
+    if (error) {
+      console.error('Error de Supabase al crear ubicación:', error);
+      throw error;
+    }
+    return this.toCamelCase(data);
   }
 
   /**
    * Actualiza una ubicación
    */
   async updateLocation(id: string, updates: any) {
+    // Convertir a snake_case para Supabase
+    const snakeCaseUpdates = this.toSnakeCase(updates);
+
     const { data, error } = await this.supabase
       .from('locations')
-      .update(updates)
+      .update(snakeCaseUpdates)
       .eq('id', id)
       .select()
       .single();
 
-    if (error) throw error;
-    return data;
+    if (error) {
+      console.error('Error de Supabase al actualizar ubicación:', error);
+      throw error;
+    }
+    return this.toCamelCase(data);
   }
 
   /**
@@ -310,44 +436,52 @@ export class SupabaseService {
       .single();
 
     if (error) throw error;
-    return data;
+    return this.toCamelCase(data);
   }
 
   /**
    * Genera ubicaciones en masa
    */
   async generateLocations(params: any) {
-    // Aquí puedes usar una función RPC de Supabase
-    // o generar las ubicaciones en el frontend
     const locations = [];
-    
+
     for (let row = params.rowMin; row <= params.rowMax; row++) {
       for (let bay = params.bayMin; bay <= params.bayMax; bay++) {
         for (let level = params.levelMin; level <= params.levelMax; level++) {
-          const storageName = `${params.area}-${String(row).padStart(2, '0')}-${String(bay).padStart(2, '0')}-${String(level).padStart(2, '0')}`;
-          
+          // El usuario quiere el patrón consecutivo TYPE-CODE (ej: REGULAR-122)
+          const code = (row * 100) + (bay * 10) + level;
+          const storageName = `${params.type}-${code}`;
+
           locations.push({
-            zone: params.zone,
+            zone: params.zone || '-',
             category: params.category,
             type: params.type,
             area: params.area,
-            row: row,
-            bay: bay,
-            level: level,
+            row: row.toString(),
+            bay: bay.toString(),
+            level: level.toString(),
             storage_name: storageName,
+            bin_qty: 0,
+            content: params.content || '',
             active: true
           });
         }
       }
     }
 
+    console.log('Generando ubicaciones en masa:', locations.length);
+
     const { data, error } = await this.supabase
       .from('locations')
       .insert(locations)
       .select();
 
-    if (error) throw error;
-    return data;
+    if (error) {
+      console.error('Error de Supabase al generar ubicaciones:', error);
+      throw error;
+    }
+
+    return this.toCamelCase(data);
   }
 
   // ==================== BINS ====================
