@@ -21,8 +21,8 @@ import { CommonModule } from '@angular/common';
         <app-configurator [simple]="true" />
         <div class="bg-surface-100 dark:bg-surface-950 h-screen w-screen flex items-center justify-center">
             <div class="bg-surface-0 dark:bg-surface-900 py-16 px-8 sm:px-16 shadow flex flex-col w-11/12 sm:w-[30rem]" style="border-radius: 14px">
-                <h1 class="font-bold text-2xl mt-0 mb-2">VERONA</h1>
-                <p class="text-muted-color mb-6">Welcome to the <strong>Verona Community</strong>, where the magic happens, sign in to continue.</p>
+                <img src="/layout/images/logo-dark.png" alt="Binlogic" class="mb-4" style="height: 72px; width: auto;" />
+                <p class="text-muted-color mb-6 text-center">Welcome to the <strong>Binlogic Community</strong>, where the magic happens, sign in to continue.</p>
 
                 <p-message *ngIf="errorMessage" severity="error" [text]="errorMessage" styleClass="mb-4 w-full"></p-message>
                 <p-message *ngIf="successMessage" severity="success" [text]="successMessage" styleClass="mb-4 w-full"></p-message>
@@ -46,22 +46,6 @@ import { CommonModule } from '@angular/common';
                     </div>
                 </form>
 
-                <span class="text-muted-color text-center mb-6">or sign in with below</span>
-
-                <div class="flex gap-6 items-center justify-center">
-                    <a href="https://www.facebook.com" class="inline-flex shrink-0 w-12 h-12 justify-center items-center bg-surface-50 dark:bg-surface-950 rounded-full">
-                        <i class="pi pi-facebook !text-2xl text-color"></i>
-                    </a>
-                    <a href="https://www.twitter.com" class="inline-flex shrink-0 w-12 h-12 justify-center items-center bg-surface-50 dark:bg-surface-950 rounded-full">
-                        <i class="pi pi-twitter !text-2xl text-color"></i>
-                    </a>
-                    <a href="https://www.google.com" class="inline-flex shrink-0 w-12 h-12 justify-center items-center bg-surface-50 dark:bg-surface-950 rounded-full">
-                        <i class="pi pi-google !text-2xl text-color"></i>
-                    </a>
-                    <a href="https://www.github.com" class="inline-flex shrink-0 w-12 h-12 justify-center items-center bg-surface-50 dark:bg-surface-950 rounded-full">
-                        <i class="pi pi-github !text-2xl text-color"></i>
-                    </a>
-                </div>
             </div>
         </div>
     `
@@ -96,7 +80,7 @@ export class Login {
 
         try {
             const result = await this.authService.login(this.email, this.password);
-            
+
             if (result.success) {
                 this.successMessage = 'Inicio de sesión exitoso';
                 setTimeout(() => {

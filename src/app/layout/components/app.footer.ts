@@ -7,7 +7,7 @@ import { LayoutService } from '@/layout/service/layout.service';
     selector: '[app-footer]',
     template: ` <div class="footer-start">
             <img src="/layout/images/logo-dark.png" alt="logo" />
-            <span class="app-name">Verona</span>
+            <span class="app-name">Binlogic</span>
         </div>
         <div class="footer-right">
             <span>© Your Organization</span>

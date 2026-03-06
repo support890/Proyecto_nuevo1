@@ -19,8 +19,7 @@ import { AuthService } from '@/pages/service/auth.service';
     template: `
         <div class="layout-topbar">
             <a class="app-logo" routerLink="/">
-                <img alt="app logo" [src]="logo" />
-                <span class="app-name">Verona</span>
+                <img alt="app logo" [src]="logo" style="height: 48px; width: auto;" />
             </a>
 
             <button #menubutton class="topbar-menubutton p-link" type="button" (click)="onMenuButtonClick()">
@@ -66,7 +65,7 @@ import { AuthService } from '@/pages/service/auth.service';
                         <img alt="avatar" src="/layout/images/avatar.png" />
                         <span class="profile-details">
                             <span class="profile-name">{{ currentUser()?.name }}</span>
-                            <span class="profile-job">{{ currentUser()?.role }}</span>
+                            <span class="profile-name">{{ currentUser()?.role }}</span>
                         </span>
                         <i class="pi pi-angle-down"></i>
                     </button>
