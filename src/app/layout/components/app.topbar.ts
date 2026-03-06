@@ -19,8 +19,7 @@ import { AuthService } from '@/pages/service/auth.service';
     template: `
         <div class="layout-topbar">
             <a class="app-logo" routerLink="/">
-                <img alt="app logo" [src]="logo" />
-                <span class="app-name">Verona</span>
+                <img alt="app logo" [src]="logo" style="height: 48px; width: auto;" />
             </a>
 
             <button #menubutton class="topbar-menubutton p-link" type="button" (click)="onMenuButtonClick()">

@@ -42,11 +42,11 @@ export interface TabCloseEvent {
 export class LayoutService {
     _config: layoutConfig = {
         preset: 'Aura',
-        primary: 'rose',
+        primary: 'blue',
         surface: null,
         darkTheme: false,
         menuMode: 'slim',
-        layoutTheme: 'primaryColor'
+        layoutTheme: 'colorScheme'
     };
 
     _state: LayoutState = {

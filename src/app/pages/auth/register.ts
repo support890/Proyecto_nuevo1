@@ -32,8 +32,8 @@ import { CommonModule } from '@angular/common';
         <app-configurator [simple]="true" />
         <div class="bg-surface-100 dark:bg-surface-950 h-screen w-screen flex items-center justify-center">
             <div class="bg-surface-0 dark:bg-surface-900 py-16 px-8 sm:px-16 shadow flex flex-col w-11/12 sm:w-[30rem]" style="border-radius: 14px">
-                <h1 class="font-bold text-2xl mt-0 mb-2">VERONA</h1>
-                <p class="text-muted-color mb-6">Crea tu cuenta en <strong>Verona</strong> para comenzar</p>
+                <h1 class="font-bold text-2xl mt-0 mb-2">BINLOGIC</h1>
+                <p class="text-muted-color mb-6">Crea tu cuenta en <strong>Binlogic</strong> para comenzar</p>
 
                 <p-message *ngIf="errorMessage" severity="error" [text]="errorMessage" styleClass="mb-4 w-full"></p-message>
                 <p-message *ngIf="successMessage" severity="success" [text]="successMessage" styleClass="mb-4 w-full"></p-message>
@@ -137,7 +137,7 @@ export class Register {
     constructor(
         private authService: AuthService,
         private router: Router
-    ) {}
+    ) { }
 
     async onRegister(): Promise<void> {
         // Validaciones
@@ -162,7 +162,7 @@ export class Register {
 
         try {
             const result = await this.authService.signUp(this.email, this.password, this.name);
-            
+
             if (result.success) {
                 this.registrationSuccess = true;
                 this.successMessage = 'Registro exitoso. Revisa tu email para confirmar tu cuenta.';
