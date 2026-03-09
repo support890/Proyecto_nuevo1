@@ -83,6 +83,12 @@ export const routes: Routes = [
                 data: { breadcrumb: 'Gestión de Bins' },
                 canActivate: [authGuard],
                 loadComponent: () => import('./pages/bins/bin-list').then((c) => c.BinList)
+            },
+            {
+                path: 'almacen/disenador',
+                data: { breadcrumb: 'Diseñador de Almacén' },
+                canActivate: [authGuard],
+                loadComponent: () => import('./pages/warehouse/warehouse-designer').then((c) => c.WarehouseDesigner)
             }
         ]
     },

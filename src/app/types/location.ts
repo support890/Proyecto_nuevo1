@@ -24,7 +24,8 @@ export interface LocationGeneratorParams {
     rowMax: number;
     bayMin: number;
     bayMax: number;
-    levelMin: number;
-    levelMax: number;
+    levelMin: string;
+    levelMax: string;
     content?: string;
+    storageNameFormat?: string;
 }

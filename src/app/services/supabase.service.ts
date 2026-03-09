@@ -365,13 +365,23 @@ export class SupabaseService {
    * Obtiene todas las ubicaciones
    */
   async getLocations() {
-    const { data, error } = await this.supabase
-      .from('locations')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const [locResult, binResult] = await Promise.all([
+      this.supabase.from('locations').select('*').order('created_at', { ascending: false }),
+      this.supabase.from('bins').select('location_id')
+    ]);
 
-    if (error) throw error;
-    return this.toCamelCase(data);
+    if (locResult.error) throw locResult.error;
+
+    const binCountMap = new Map<string, number>();
+    (binResult.data || []).forEach((b: any) => {
+      binCountMap.set(b.location_id, (binCountMap.get(b.location_id) || 0) + 1);
+    });
+
+    const camelData = this.toCamelCase(locResult.data);
+    return (camelData || []).map((loc: any) => ({
+      ...loc,
+      binQty: binCountMap.get(loc.id) ?? 0
+    }));
   }
 
   /**
@@ -379,16 +389,22 @@ export class SupabaseService {
    */
   async createLocation(location: any) {
     // Asegurar valores por defecto para campos opcionales
+    // Solo enviamos los campos que existen en la tabla
     const locationToInsert = {
-      ...location,
+      zone: location.zone,
+      category: location.category,
+      type: location.type,
+      area: location.area,
+      row: location.row,
+      bay: location.bay,
+      level: location.level,
+      storage_name: location.storageName,
+      custom_name: location.customName !== undefined ? location.customName : false,
       content: location.content || null,
-      customName: location.customName !== undefined ? location.customName : false,
-      active: location.active !== undefined ? location.active : true,
-      binQty: location.binQty || 0
+      active: location.active !== undefined ? location.active : true
     };
 
-    // Convertir a snake_case para Supabase
-    const snakeCaseLocation = this.toSnakeCase(locationToInsert);
+    const snakeCaseLocation = locationToInsert;
 
     const { data, error } = await this.supabase
       .from('locations')
@@ -445,12 +461,26 @@ export class SupabaseService {
   async generateLocations(params: any) {
     const locations = [];
 
+    const levelMinCode = params.levelMin.charCodeAt(0);
+    const levelMaxCode = params.levelMax.charCodeAt(0);
+
     for (let row = params.rowMin; row <= params.rowMax; row++) {
       for (let bay = params.bayMin; bay <= params.bayMax; bay++) {
-        for (let level = params.levelMin; level <= params.levelMax; level++) {
-          // El usuario quiere el patrón consecutivo TYPE-CODE (ej: REGULAR-122)
-          const code = (row * 100) + (bay * 10) + level;
-          const storageName = `${params.type}-${code}`;
+        for (let levelCode = levelMinCode; levelCode <= levelMaxCode; levelCode++) {
+          const level = String.fromCharCode(levelCode);
+          let storageName: string;
+          if (params.storageNameFormat) {
+            storageName = params.storageNameFormat
+              .replace(/\{Zone\}/g, params.zone || '')
+              .replace(/\{Area\}/g, params.area || '')
+              .replace(/\{Row\}/g, row.toString())
+              .replace(/\{Bay\}/g, bay.toString())
+              .replace(/\{Level\}/g, level)
+              .replace(/\{Category\}/g, params.category || '')
+              .replace(/\{Type\}/g, params.type || '');
+          } else {
+            storageName = `${params.area}-${row}-${bay}-${level}`;
+          }
 
           locations.push({
             zone: params.zone || '-',
@@ -459,10 +489,10 @@ export class SupabaseService {
             area: params.area,
             row: row.toString(),
             bay: bay.toString(),
-            level: level.toString(),
+            level: level,
             storage_name: storageName,
-            bin_qty: 0,
-            content: params.content || '',
+            custom_name: false,
+            content: params.content || null,
             active: true
           });
         }
@@ -509,6 +539,19 @@ export class SupabaseService {
       .insert([bin])
       .select()
       .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Crea múltiples bins en masa
+   */
+  async createBins(bins: any[]) {
+    const { data, error } = await this.supabase
+      .from('bins')
+      .insert(bins)
+      .select();
 
     if (error) throw error;
     return data;

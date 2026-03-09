@@ -2,8 +2,8 @@
 
 <div class="card">
     <div class="flex items-center mb-6">
-        <p-button 
-            icon="pi pi-arrow-left" 
+        <p-button
+            icon="pi pi-arrow-left"
             [text]="true"
             [rounded]="true"
             (onClick)="goBack()"
@@ -20,231 +20,303 @@
     </div>
 
     <div class="grid grid-cols-12 gap-6">
-        <!-- Información Principal -->
+
+        <!-- Panel Principal -->
         <div class="col-span-12 lg:col-span-8">
             <p-card header="Parámetros de Generación">
-                <div class="grid grid-cols-12 gap-4">
-                    <!-- Zone y Category -->
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="block mb-2 font-semibold">
-                            Zone
-                        </label>
-                        <input 
-                            pInputText 
-                            [(ngModel)]="generatorParams.zone" 
-                            placeholder="Ingrese la zona"
-                            class="w-full" />
+                <div class="flex gap-0">
+
+                    <!-- Columna izquierda: Zone, Category, Type -->
+                    <div class="flex-1 flex flex-col gap-4">
+
+                        <div>
+                            <label class="block mb-2 font-semibold">Zone</label>
+                            <div class="flex gap-2">
+                                <p-dropdown
+                                    [options]="zoneOptions"
+                                    [(ngModel)]="generatorParams.zone"
+                                    placeholder="Seleccionar zona"
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    styleClass="w-full"
+                                    appendTo="body">
+                                </p-dropdown>
+                                <p-button
+                                    icon="pi pi-plus"
+                                    [rounded]="true"
+                                    [outlined]="true"
+                                    (onClick)="showAddZone = true"
+                                    pTooltip="Agregar zona">
+                                </p-button>
+                            </div>
+                            <div *ngIf="showAddZone" class="flex gap-2 mt-2">
+                                <input
+                                    pInputText
+                                    [(ngModel)]="newZoneName"
+                                    placeholder="Nombre de la zona"
+                                    class="w-full"
+                                    (keyup.enter)="addZone()" />
+                                <p-button icon="pi pi-check" severity="success" [rounded]="true" (onClick)="addZone()"></p-button>
+                                <p-button icon="pi pi-times" severity="secondary" [rounded]="true" [outlined]="true" (onClick)="cancelAddZone()"></p-button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block mb-2 font-semibold">
+                                Category <span class="text-red-500">*</span>
+                            </label>
+                            <p-dropdown
+                                [options]="categoryOptions"
+                                [(ngModel)]="generatorParams.category"
+                                placeholder="Select category"
+                                optionLabel="label"
+                                optionValue="value"
+                                styleClass="w-full"
+                                appendTo="body">
+                            </p-dropdown>
+                        </div>
+
+                        <div>
+                            <label class="block mb-2 font-semibold">
+                                Type <span class="text-red-500">*</span>
+                            </label>
+                            <p-dropdown
+                                [options]="typeOptions"
+                                [(ngModel)]="generatorParams.type"
+                                placeholder="Select type"
+                                optionLabel="label"
+                                optionValue="value"
+                                styleClass="w-full"
+                                appendTo="body">
+                            </p-dropdown>
+                        </div>
+
                     </div>
 
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="block mb-2 font-semibold">
-                            Category <span class="text-red-500">*</span>
-                        </label>
-                        <p-dropdown 
-                            [options]="categoryOptions"
-                            [(ngModel)]="generatorParams.category"
-                            placeholder="Select category"
-                            optionLabel="label"
-                            optionValue="value"
-                            styleClass="w-full"
-                            appendTo="body">
-                        </p-dropdown>
-                    </div>
+                    <!-- Separador vertical -->
+                    <div style="width: 1px; background-color: #e2e8f0; margin: 0 2rem; flex-shrink: 0;"></div>
 
-                    <!-- Type y Area -->
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="block mb-2 font-semibold">
-                            Type <span class="text-red-500">*</span>
-                        </label>
-                        <p-dropdown 
-                            [options]="typeOptions"
-                            [(ngModel)]="generatorParams.type"
-                            placeholder="Select type"
-                            optionLabel="label"
-                            optionValue="value"
-                            styleClass="w-full"
-                            appendTo="body">
-                        </p-dropdown>
-                    </div>
+                    <!-- Columna derecha: Area, Row, Bay, Level -->
+                    <div class="flex-1 flex flex-col gap-4">
 
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="block mb-2 font-semibold">
-                            Area <span class="text-red-500">*</span>
-                        </label>
-                        <input 
-                            pInputText 
-                            [(ngModel)]="generatorParams.area" 
-                            placeholder="Ej: A1"
-                            class="w-full" />
-                    </div>
+                        <div>
+                            <label class="block mb-2 font-semibold">
+                                Area <span class="text-red-500">*</span>
+                            </label>
+                            <input
+                                pInputText
+                                [(ngModel)]="generatorParams.area"
+                                placeholder="Ej: A1"
+                                class="w-full" />
+                        </div>
 
-                    <!-- Row Min y Row Max -->
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="block mb-2 font-semibold">
-                            Row Min <span class="text-red-500">*</span>
-                        </label>
-                        <p-inputNumber 
-                            [(ngModel)]="generatorParams.rowMin"
-                            [min]="1"
-                            [showButtons]="true"
-                            buttonLayout="horizontal"
-                            decrementButtonClass="p-button-outlined"
-                            incrementButtonClass="p-button-outlined"
-                            incrementButtonIcon="pi pi-plus"
-                            decrementButtonIcon="pi pi-minus"
-                            styleClass="w-full">
-                        </p-inputNumber>
-                    </div>
+                        <!-- Row Min / Row Max -->
+                        <div class="flex gap-3">
+                            <div class="flex-1">
+                                <label class="block mb-2 font-semibold">
+                                    Row Min <span class="text-red-500">*</span>
+                                </label>
+                                <p-inputNumber
+                                    [(ngModel)]="generatorParams.rowMin"
+                                    [min]="1"
+                                    [max]="1000000"
+                                    [showButtons]="true"
+                                    buttonLayout="horizontal"
+                                    decrementButtonClass="p-button-outlined"
+                                    incrementButtonClass="p-button-outlined"
+                                    incrementButtonIcon="pi pi-plus"
+                                    decrementButtonIcon="pi pi-minus"
+                                    styleClass="w-full">
+                                </p-inputNumber>
+                            </div>
+                            <div class="flex-1">
+                                <label class="block mb-2 font-semibold">
+                                    Row Max <span class="text-red-500">*</span>
+                                </label>
+                                <p-inputNumber
+                                    [(ngModel)]="generatorParams.rowMax"
+                                    [min]="1"
+                                    [max]="1000000"
+                                    [showButtons]="true"
+                                    buttonLayout="horizontal"
+                                    decrementButtonClass="p-button-outlined"
+                                    incrementButtonClass="p-button-outlined"
+                                    incrementButtonIcon="pi pi-plus"
+                                    decrementButtonIcon="pi pi-minus"
+                                    styleClass="w-full">
+                                </p-inputNumber>
+                            </div>
+                        </div>
 
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="block mb-2 font-semibold">
-                            Row Max <span class="text-red-500">*</span>
-                        </label>
-                        <p-inputNumber 
-                            [(ngModel)]="generatorParams.rowMax"
-                            [min]="1"
-                            [showButtons]="true"
-                            buttonLayout="horizontal"
-                            decrementButtonClass="p-button-outlined"
-                            incrementButtonClass="p-button-outlined"
-                            incrementButtonIcon="pi pi-plus"
-                            decrementButtonIcon="pi pi-minus"
-                            styleClass="w-full">
-                        </p-inputNumber>
-                    </div>
+                        <!-- Bay Min / Bay Max -->
+                        <div class="flex gap-3">
+                            <div class="flex-1">
+                                <label class="block mb-2 font-semibold">
+                                    Bay Min <span class="text-red-500">*</span>
+                                </label>
+                                <p-inputNumber
+                                    [(ngModel)]="generatorParams.bayMin"
+                                    [min]="1"
+                                    [max]="1000000"
+                                    [showButtons]="true"
+                                    buttonLayout="horizontal"
+                                    decrementButtonClass="p-button-outlined"
+                                    incrementButtonClass="p-button-outlined"
+                                    incrementButtonIcon="pi pi-plus"
+                                    decrementButtonIcon="pi pi-minus"
+                                    styleClass="w-full">
+                                </p-inputNumber>
+                            </div>
+                            <div class="flex-1">
+                                <label class="block mb-2 font-semibold">
+                                    Bay Max <span class="text-red-500">*</span>
+                                </label>
+                                <p-inputNumber
+                                    [(ngModel)]="generatorParams.bayMax"
+                                    [min]="1"
+                                    [max]="1000000"
+                                    [showButtons]="true"
+                                    buttonLayout="horizontal"
+                                    decrementButtonClass="p-button-outlined"
+                                    incrementButtonClass="p-button-outlined"
+                                    incrementButtonIcon="pi pi-plus"
+                                    decrementButtonIcon="pi pi-minus"
+                                    styleClass="w-full">
+                                </p-inputNumber>
+                            </div>
+                        </div>
 
-                    <!-- Bay Min y Bay Max -->
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="block mb-2 font-semibold">
-                            Bay Min <span class="text-red-500">*</span>
-                        </label>
-                        <p-inputNumber 
-                            [(ngModel)]="generatorParams.bayMin"
-                            [min]="1"
-                            [showButtons]="true"
-                            buttonLayout="horizontal"
-                            decrementButtonClass="p-button-outlined"
-                            incrementButtonClass="p-button-outlined"
-                            incrementButtonIcon="pi pi-plus"
-                            decrementButtonIcon="pi pi-minus"
-                            styleClass="w-full">
-                        </p-inputNumber>
-                    </div>
+                        <!-- Level Min / Level Max -->
+                        <div class="flex gap-3">
+                            <div class="flex-1">
+                                <label class="block mb-2 font-semibold">
+                                    Level Min <span class="text-red-500">*</span>
+                                </label>
+                                <p-dropdown
+                                    [(ngModel)]="generatorParams.levelMin"
+                                    [options]="levelOptions"
+                                    placeholder="Seleccionar nivel"
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    styleClass="w-full"
+                                    appendTo="body">
+                                </p-dropdown>
+                            </div>
+                            <div class="flex-1">
+                                <label class="block mb-2 font-semibold">
+                                    Level Max <span class="text-red-500">*</span>
+                                </label>
+                                <p-dropdown
+                                    [(ngModel)]="generatorParams.levelMax"
+                                    [options]="levelOptions"
+                                    placeholder="Seleccionar nivel"
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    styleClass="w-full"
+                                    appendTo="body">
+                                </p-dropdown>
+                            </div>
+                        </div>
 
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="block mb-2 font-semibold">
-                            Bay Max <span class="text-red-500">*</span>
-                        </label>
-                        <p-inputNumber 
-                            [(ngModel)]="generatorParams.bayMax"
-                            [min]="1"
-                            [showButtons]="true"
-                            buttonLayout="horizontal"
-                            decrementButtonClass="p-button-outlined"
-                            incrementButtonClass="p-button-outlined"
-                            incrementButtonIcon="pi pi-plus"
-                            decrementButtonIcon="pi pi-minus"
-                            styleClass="w-full">
-                        </p-inputNumber>
-                    </div>
-
-                    <!-- Level Min y Level Max -->
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="block mb-2 font-semibold">
-                            Level Min <span class="text-red-500">*</span>
-                        </label>
-                        <p-dropdown 
-                            [(ngModel)]="generatorParams.levelMin"
-                            [options]="[
-                                {label: '1', value: 1},
-                                {label: '2', value: 2},
-                                {label: '3', value: 3},
-                                {label: '4', value: 4},
-                                {label: '5', value: 5}
-                            ]"
-                            placeholder="Select level"
-                            optionLabel="label"
-                            optionValue="value"
-                            [showClear]="true"
-                            styleClass="w-full"
-                            appendTo="body">
-                        </p-dropdown>
-                    </div>
-
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="block mb-2 font-semibold">
-                            Level Max <span class="text-red-500">*</span>
-                        </label>
-                        <p-dropdown 
-                            [(ngModel)]="generatorParams.levelMax"
-                            [options]="[
-                                {label: '1', value: 1},
-                                {label: '2', value: 2},
-                                {label: '3', value: 3},
-                                {label: '4', value: 4},
-                                {label: '5', value: 5}
-                            ]"
-                            placeholder="Select level"
-                            optionLabel="label"
-                            optionValue="value"
-                            [showClear]="true"
-                            styleClass="w-full"
-                            appendTo="body">
-                        </p-dropdown>
-                    </div>
-
-                    <!-- Content Field -->
-                    <div class="col-span-12">
-                        <label class="block mb-2 font-semibold">
-                            Content
-                        </label>
-                        <input 
-                            pInputText 
-                            [(ngModel)]="generatorParams.content" 
-                            placeholder="Descripción del contenido para todas las ubicaciones (ej: RAPIDO, DDD)"
-                            class="w-full" />
                     </div>
                 </div>
+
+                <!-- Formato + Storage Name Preview -->
+                <div class="flex gap-0" style="border-top: 1px solid #e2e8f0; padding-top: 1.25rem; margin-top: 1.5rem;">
+
+                    <!-- Formato del nombre -->
+                    <div class="flex-1">
+                        <label class="block mb-2 font-semibold">Formato del nombre</label>
+                        <div class="flex gap-2 flex-wrap mb-2" style="height: 28px; overflow: hidden; align-items: center;">
+                            <span
+                                *ngFor="let token of availableTokens"
+                                (click)="insertToken(token)"
+                                class="cursor-pointer text-xs font-mono px-2 rounded"
+                                style="background:#e8f0fe; color:#1a4fa0; border: 1px solid #b3c6f5; user-select:none; line-height: 22px; flex-shrink:0;"
+                                [pTooltip]="'Insertar ' + token">
+                                {{ token }}
+                            </span>
+                        </div>
+                        <input
+                            pInputText
+                            [(ngModel)]="storageNameFormat"
+                            placeholder="Ej: {Area}-{Row}-{Bay}-{Level}"
+                            class="w-full font-mono" />
+                        <small class="text-surface-500">Escribe texto libre y haz clic en los tokens para insertarlos</small>
+                    </div>
+
+                    <!-- Storage Name Preview -->
+                    <div class="flex-1" style="padding-left: 2rem;">
+                        <label class="block mb-2 font-semibold">Storage Name Preview</label>
+                        <div style="height: 28px; margin-bottom: 0.5rem;"></div>
+                        <input
+                            pInputText
+                            [ngModel]="storageNamePreview"
+                            [disabled]="true"
+                            placeholder="Vista previa del nombre"
+                            class="w-full font-mono" />
+                        <small class="text-surface-500">Ejemplo con los valores mínimos ingresados</small>
+                    </div>
+
+                </div>
+
             </p-card>
         </div>
 
         <!-- Panel Lateral -->
         <div class="col-span-12 lg:col-span-4">
-            <p-card header="Resumen">
-                <div class="flex items-center gap-2 mb-4">
-                    <i class="pi pi-info-circle text-primary text-xl"></i>
-                    <span class="font-semibold">Generación Masiva</span>
+
+            <!-- Bulk Creation Summary -->
+            <p-card styleClass="mb-4">
+                <div class="flex items-center gap-2 mb-3">
+                    <i class="pi pi-info-circle" style="color: #1a4fa0;"></i>
+                    <span class="font-semibold" style="color: #1a4fa0;">Bulk Creation Summary</span>
                 </div>
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div class="text-center p-3 surface-50 dark:surface-800 rounded-lg">
-                        <div class="text-3xl font-bold text-primary mb-1">{{ totalLocations }}</div>
-                        <div class="text-sm text-surface-600 dark:text-surface-400">Total Locations</div>
+                <div class="flex gap-2 text-center">
+                    <div class="flex-1 p-2 rounded-lg surface-50 dark:surface-800">
+                        <div class="text-xl font-bold text-primary">{{ totalLocations }}</div>
+                        <div class="text-xs text-surface-500 mt-1">Total</div>
                     </div>
-                    <div class="text-center p-3 surface-50 dark:surface-800 rounded-lg">
-                        <div class="text-3xl font-bold text-primary mb-1">{{ totalRows }}</div>
-                        <div class="text-sm text-surface-600 dark:text-surface-400">Rows</div>
+                    <div class="flex-1 p-2 rounded-lg surface-50 dark:surface-800">
+                        <div class="text-xl font-bold text-primary">{{ totalRows }}</div>
+                        <div class="text-xs text-surface-500 mt-1">Rows</div>
                     </div>
-                    <div class="text-center p-3 surface-50 dark:surface-800 rounded-lg">
-                        <div class="text-3xl font-bold text-primary mb-1">{{ totalBays }}</div>
-                        <div class="text-sm text-surface-600 dark:text-surface-400">Bays</div>
+                    <div class="flex-1 p-2 rounded-lg surface-50 dark:surface-800">
+                        <div class="text-xl font-bold text-primary">{{ totalBays }}</div>
+                        <div class="text-xs text-surface-500 mt-1">Bays</div>
                     </div>
-                    <div class="text-center p-3 surface-50 dark:surface-800 rounded-lg">
-                        <div class="text-3xl font-bold text-primary mb-1">{{ totalLevels }}</div>
-                        <div class="text-sm text-surface-600 dark:text-surface-400">Levels</div>
+                    <div class="flex-1 p-2 rounded-lg surface-50 dark:surface-800">
+                        <div class="text-xl font-bold text-primary">{{ totalLevels }}</div>
+                        <div class="text-xs text-surface-500 mt-1">Levels</div>
                     </div>
                 </div>
             </p-card>
 
+            <p-card header="Content" styleClass="mb-4">
+                <input
+                    pInputText
+                    [(ngModel)]="generatorParams.content"
+                    placeholder="Descripción del contenido"
+                    class="w-full" />
+            </p-card>
+
             <div class="flex flex-col gap-2 mt-4">
-                <p-button 
+                <p-button
                     label="Generar Ubicaciones"
                     icon="pi pi-check"
                     (onClick)="generateLocations()"
                     styleClass="w-full"
                     severity="success">
                 </p-button>
-                <p-button 
-                    label="Cancelar" 
+                <p-button
+                    label="Generar y Agregar Bins"
+                    icon="pi pi-box"
+                    (onClick)="generateAndAddBins()"
+                    styleClass="w-full"
+                    severity="info">
+                </p-button>
+                <p-button
+                    label="Cancelar"
                     icon="pi pi-times"
                     (onClick)="goBack()"
                     styleClass="w-full"
@@ -252,5 +324,193 @@
                 </p-button>
             </div>
         </div>
+
     </div>
 </div>
+
+<!-- Bin Dialog -->
+<p-dialog
+    [(visible)]="showBinDialog"
+    [modal]="true"
+    [closable]="false"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: '520px' }">
+
+    <ng-template pTemplate="header">
+        <div class="w-full" style="padding: 0.5rem 0.25rem;">
+            <div class="flex items-center gap-2 mb-2">
+                <i class="pi pi-box" style="color: #1a4fa0; font-size: 1.25rem;"></i>
+                <span class="font-bold text-xl">Agregar Bins</span>
+            </div>
+            <div class="text-sm text-surface-500 mb-6">
+                Se aplicarán los mismos bins a las
+                <span class="font-semibold text-primary">{{ generatedLocationIds.length }} ubicaciones</span> generadas
+            </div>
+            <p-selectButton
+                [options]="binModeOptions"
+                [(ngModel)]="binDialogMode"
+                optionLabel="label"
+                optionValue="value"
+                styleClass="w-full">
+            </p-selectButton>
+        </div>
+    </ng-template>
+
+    <!-- MODO INDIVIDUAL -->
+    <div *ngIf="binDialogMode === 'single'" class="flex flex-col gap-4 pt-2">
+
+        <div>
+            <label class="block mb-2 font-semibold">
+                Bin Name <span class="text-red-500">*</span>
+            </label>
+            <input
+                pInputText
+                [(ngModel)]="newBinName"
+                placeholder="Ej: BIN-GENERAL"
+                class="w-full" />
+            <small class="text-surface-500">Se creará 1 bin con este nombre en cada ubicación</small>
+        </div>
+
+        <div>
+            <label class="block mb-2 font-semibold">Capacity</label>
+            <p-inputNumber
+                [(ngModel)]="newBinCapacity"
+                [min]="0"
+                [showButtons]="true"
+                buttonLayout="horizontal"
+                decrementButtonClass="p-button-outlined"
+                incrementButtonClass="p-button-outlined"
+                incrementButtonIcon="pi pi-plus"
+                decrementButtonIcon="pi pi-minus"
+                placeholder="Capacidad máxima"
+                styleClass="w-full">
+            </p-inputNumber>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <p-inputSwitch [(ngModel)]="newBinActive"></p-inputSwitch>
+            <label>{{ newBinActive ? 'Activo' : 'Inactivo' }}</label>
+        </div>
+
+    </div>
+
+    <!-- MODO MASIVO -->
+    <div *ngIf="binDialogMode === 'bulk'" class="flex flex-col gap-4 pt-2">
+
+        <div>
+            <label class="block mb-2 font-semibold">Prefijo <span class="text-red-500">*</span></label>
+            <input pInputText [(ngModel)]="bulkPrefix" placeholder="BIN" class="w-full font-mono" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block mb-2 font-semibold">Desde</label>
+                <p-inputNumber
+                    [(ngModel)]="bulkStartNumber"
+                    [min]="1"
+                    [showButtons]="true"
+                    buttonLayout="horizontal"
+                    decrementButtonClass="p-button-outlined"
+                    incrementButtonClass="p-button-outlined"
+                    incrementButtonIcon="pi pi-plus"
+                    decrementButtonIcon="pi pi-minus"
+                    styleClass="w-full">
+                </p-inputNumber>
+            </div>
+            <div>
+                <label class="block mb-2 font-semibold">Hasta</label>
+                <p-inputNumber
+                    [(ngModel)]="bulkEndNumber"
+                    [min]="1"
+                    [showButtons]="true"
+                    buttonLayout="horizontal"
+                    decrementButtonClass="p-button-outlined"
+                    incrementButtonClass="p-button-outlined"
+                    incrementButtonIcon="pi pi-plus"
+                    decrementButtonIcon="pi pi-minus"
+                    styleClass="w-full">
+                </p-inputNumber>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 items-end">
+            <div>
+                <label class="block mb-2 font-semibold">Capacity</label>
+                <p-inputNumber
+                    [(ngModel)]="bulkCapacity"
+                    [min]="0"
+                    [showButtons]="true"
+                    buttonLayout="horizontal"
+                    decrementButtonClass="p-button-outlined"
+                    incrementButtonClass="p-button-outlined"
+                    incrementButtonIcon="pi pi-plus"
+                    decrementButtonIcon="pi pi-minus"
+                    placeholder="Opcional"
+                    styleClass="w-full">
+                </p-inputNumber>
+            </div>
+            <div class="flex items-center gap-3 pb-1">
+                <p-inputSwitch [(ngModel)]="bulkActive"></p-inputSwitch>
+                <label>{{ bulkActive ? 'Activos' : 'Inactivos' }}</label>
+            </div>
+        </div>
+
+        <div style="border-top: 1px solid #e2e8f0;"></div>
+
+        <div>
+            <label class="block mb-2 font-semibold">Formato del nombre</label>
+            <div class="flex gap-2 mb-2">
+                <span
+                    *ngFor="let token of bulkTokens"
+                    (click)="insertBulkToken(token)"
+                    class="cursor-pointer text-xs font-mono px-2 py-1 rounded"
+                    style="background:#e8f0fe; color:#1a4fa0; border: 1px solid #b3c6f5; user-select:none;">
+                    {{ token }}
+                </span>
+            </div>
+            <input
+                pInputText
+                [(ngModel)]="bulkNameFormat"
+                placeholder="Ej: {Prefix}-{Number}"
+                class="w-full font-mono" />
+            <small class="text-surface-500">Haz clic en los tokens para insertarlos en el formato</small>
+        </div>
+
+        <div>
+            <label class="block mb-2 font-semibold">Vista previa</label>
+            <input
+                pInputText
+                [ngModel]="bulkPreview"
+                [disabled]="true"
+                class="w-full font-mono" />
+            <small class="text-surface-500">
+                Se crearán <strong>{{ bulkTotal }} bins</strong> en cada una de las
+                <strong>{{ generatedLocationIds.length }} ubicaciones</strong>
+                (total: {{ bulkTotal * generatedLocationIds.length }})
+            </small>
+        </div>
+
+    </div>
+
+    <ng-template pTemplate="footer">
+        <div class="flex gap-2 justify-end">
+            <p-button
+                label="Omitir"
+                icon="pi pi-times"
+                [outlined]="true"
+                (onClick)="closeBinDialog()">
+            </p-button>
+            <p-button
+                [label]="binDialogMode === 'bulk'
+                    ? 'Crear ' + (bulkTotal * generatedLocationIds.length) + ' Bins'
+                    : 'Crear 1 Bin por ubicación'"
+                icon="pi pi-check"
+                severity="success"
+                [loading]="savingBin"
+                (onClick)="saveBinsForLocations()">
+            </p-button>
+        </div>
+    </ng-template>
+
+</p-dialog>

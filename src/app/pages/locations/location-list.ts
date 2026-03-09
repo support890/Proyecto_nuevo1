@@ -12,10 +12,17 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { FormsModule } from '@angular/forms';
 import { MenuModule } from 'primeng/menu';
+import { DialogModule } from 'primeng/dialog';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { InputSwitchModule } from 'primeng/inputswitch';
+import { SelectButtonModule } from 'primeng/selectbutton';
+import { TooltipModule as PTooltipModule } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
 
 import { Location } from '../../types/location';
+import { Bin } from '../../types/bin';
 import { LocationService } from '../service/location.service';
+import { BinService } from '../service/bin.service';
 
 @Component({
     selector: 'app-location-list',
@@ -34,7 +41,12 @@ import { LocationService } from '../service/location.service';
         IconFieldModule,
         InputIconModule,
         FormsModule,
-        MenuModule
+        MenuModule,
+        DialogModule,
+        InputNumberModule,
+        InputSwitchModule,
+        SelectButtonModule,
+        PTooltipModule
     ],
     providers: [ConfirmationService, MessageService]
 })
@@ -44,14 +56,51 @@ export class LocationList implements OnInit {
     searchValue: string = '';
     menuItems: any[] = [];
 
+    // New Bin dialog
+    showNewBinDialog: boolean = false;
+    binDialogMode: 'single' | 'bulk' = 'single';
+    binModeOptions = [
+        { label: 'Individual', value: 'single' },
+        { label: 'Masivo', value: 'bulk' }
+    ];
+    selectedLocation: Location | null = null;
+    newBin: Bin = this.emptyBin();
+    savingBin: boolean = false;
+
+    // Bulk bin creation
+    bulkPrefix: string = 'BIN';
+    bulkStartNumber: number = 1;
+    bulkEndNumber: number = 10;
+    bulkCapacity: number | undefined = undefined;
+    bulkActive: boolean = true;
+    bulkNameFormat: string = '{Prefix}-{Number}';
+    bulkTokens = ['{Prefix}', '{Number}'];
+
+    get bulkTotal(): number {
+        return Math.max(0, this.bulkEndNumber - this.bulkStartNumber + 1);
+    }
+
+    get bulkPreview(): string {
+        const num = this.bulkStartNumber?.toString().padStart(3, '0') ?? '001';
+        return this.bulkNameFormat
+            .replace(/\{Prefix\}/g, this.bulkPrefix || '')
+            .replace(/\{Number\}/g, num);
+    }
+
+    insertBulkToken(token: string): void {
+        this.bulkNameFormat += token;
+    }
+
     constructor(
         private locationService: LocationService,
+        private binService: BinService,
         private router: Router,
         private confirmationService: ConfirmationService,
         private messageService: MessageService
     ) {}
 
-    ngOnInit(): void {
+    async ngOnInit(): Promise<void> {
+        await this.locationService.loadLocations();
         this.loadLocations();
     }
 
@@ -88,6 +137,10 @@ export class LocationList implements OnInit {
 
     openGenerator(): void {
         this.router.navigate(['/ubicaciones/generador']);
+    }
+
+    openDesigner(): void {
+        this.router.navigate(['/almacen/disenador']);
     }
 
     editLocation(locationId: string): void {
@@ -127,6 +180,94 @@ export class LocationList implements OnInit {
         });
     }
 
+    // New Bin dialog methods
+    openNewBinDialog(location: Location): void {
+        this.selectedLocation = location;
+        this.newBin = this.emptyBin(location.id!);
+        this.binDialogMode = 'single';
+        this.bulkPrefix = 'BIN';
+        this.bulkStartNumber = 1;
+        this.bulkEndNumber = 10;
+        this.bulkCapacity = undefined;
+        this.bulkActive = true;
+        this.bulkNameFormat = '{Prefix}-{Number}';
+        this.showNewBinDialog = true;
+    }
+
+    closeNewBinDialog(): void {
+        this.showNewBinDialog = false;
+        this.selectedLocation = null;
+        this.newBin = this.emptyBin();
+    }
+
+    async saveBin(): Promise<void> {
+        if (this.binDialogMode === 'bulk') {
+            await this.saveBulkBins();
+        } else {
+            await this.saveSingleBin();
+        }
+    }
+
+    private async saveSingleBin(): Promise<void> {
+        if (!this.newBin.binName?.trim()) {
+            this.messageService.add({ severity: 'warn', summary: 'Validación', detail: 'El nombre del bin es requerido' });
+            return;
+        }
+        this.savingBin = true;
+        try {
+            const created = await this.binService.createBin(this.newBin);
+            if (created) {
+                const currentQty = this.selectedLocation!.binQty || 0;
+                this.locationService.updateBinQty(this.selectedLocation!.id!, currentQty + 1);
+                this.messageService.add({ severity: 'success', summary: 'Éxito', detail: `Bin "${created.binName}" creado correctamente`, life: 3000 });
+                this.closeNewBinDialog();
+                this.loadLocations();
+            } else {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo crear el bin', life: 3000 });
+            }
+        } catch {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Error al crear el bin', life: 3000 });
+        } finally {
+            this.savingBin = false;
+        }
+    }
+
+    private async saveBulkBins(): Promise<void> {
+        if (!this.bulkPrefix?.trim()) {
+            this.messageService.add({ severity: 'warn', summary: 'Validación', detail: 'El prefijo es requerido' });
+            return;
+        }
+        if (this.bulkStartNumber > this.bulkEndNumber) {
+            this.messageService.add({ severity: 'warn', summary: 'Validación', detail: 'El número inicial no puede ser mayor que el final' });
+            return;
+        }
+        if (this.bulkTotal > 500) {
+            this.messageService.add({ severity: 'warn', summary: 'Validación', detail: 'No se pueden crear más de 500 bins a la vez' });
+            return;
+        }
+        this.savingBin = true;
+        try {
+            const generated = await this.binService.generateBinsWithFormat({
+                locationId: this.selectedLocation!.id!,
+                prefix: this.bulkPrefix,
+                startNumber: this.bulkStartNumber,
+                endNumber: this.bulkEndNumber,
+                nameFormat: this.bulkNameFormat,
+                capacity: this.bulkCapacity,
+                active: this.bulkActive
+            });
+            const currentQty = this.selectedLocation!.binQty || 0;
+            this.locationService.updateBinQty(this.selectedLocation!.id!, currentQty + generated.length);
+            this.messageService.add({ severity: 'success', summary: 'Éxito', detail: `${generated.length} bins creados correctamente`, life: 3000 });
+            this.closeNewBinDialog();
+            this.loadLocations();
+        } catch {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Error al crear los bins', life: 3000 });
+        } finally {
+            this.savingBin = false;
+        }
+    }
+
     getCategoryClass(category: string): string {
         const classes: any = {
             'Priority C': 'success',
@@ -149,6 +290,14 @@ export class LocationList implements OnInit {
     getMenuItems(location: Location): any[] {
         return [
             {
+                label: 'Nuevo Bin',
+                icon: 'pi pi-plus-circle',
+                command: () => this.openNewBinDialog(location)
+            },
+            {
+                separator: true
+            },
+            {
                 label: 'Editar',
                 icon: 'pi pi-pencil',
                 command: () => this.editLocation(location.id!)
@@ -159,5 +308,15 @@ export class LocationList implements OnInit {
                 command: () => this.deleteLocation(location)
             }
         ];
+    }
+
+    private emptyBin(locationId: string = ''): Bin {
+        return {
+            locationId,
+            binName: '',
+            capacity: undefined,
+            currentStock: 0,
+            active: true
+        };
     }
 }

@@ -39,6 +39,8 @@ export class BinGenerator {
         endNumber: 10
     };
 
+    generating: boolean = false;
+
     constructor(
         private binService: BinService,
         private messageService: MessageService
@@ -48,16 +50,17 @@ export class BinGenerator {
         return Math.max(0, this.generatorParams.endNumber - this.generatorParams.startNumber + 1);
     }
 
-    generateBins(): void {
+    async generateBins(): Promise<void> {
         if (!this.validateParams()) {
             return;
         }
 
         this.generatorParams.locationId = this.locationId;
+        this.generating = true;
 
         try {
-            const generated = this.binService.generateBins(this.generatorParams);
-            
+            const generated = await this.binService.generateBins(this.generatorParams);
+
             this.messageService.add({
                 severity: 'success',
                 summary: 'Éxito',
@@ -73,6 +76,8 @@ export class BinGenerator {
                 summary: 'Error',
                 detail: 'Error al generar los bins'
             });
+        } finally {
+            this.generating = false;
         }
     }
 

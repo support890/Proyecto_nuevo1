@@ -24,167 +24,240 @@
         <div class="col-span-12 lg:col-span-8">
             <p-card header="Información de la Ubicación">
                 <div class="grid grid-cols-12 gap-4">
-                    <!-- Zone y Category -->
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="block mb-2 font-semibold">
-                            Zone
-                        </label>
-                        <input 
-                            pInputText 
-                            [(ngModel)]="location.zone" 
-                            placeholder="Ingrese la zona"
-                            class="w-full" />
-                    </div>
+                    <!-- Columnas con separador -->
+                    <div class="col-span-12 flex gap-0">
 
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="block mb-2 font-semibold">
-                            Category <span class="text-red-500">*</span>
-                        </label>
-                        <p-dropdown 
-                            [options]="categoryOptions"
-                            [(ngModel)]="location.category"
-                            placeholder="Select category"
-                            optionLabel="label"
-                            optionValue="value"
-                            styleClass="w-full"
-                            appendTo="body">
-                        </p-dropdown>
-                    </div>
+                        <!-- Columna 1: Zone, Category, Type -->
+                        <div class="flex-1 flex flex-col gap-4">
 
-                    <!-- Type y Area -->
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="block mb-2 font-semibold">
-                            Type <span class="text-red-500">*</span>
-                        </label>
-                        <p-dropdown 
-                            [options]="typeOptions"
-                            [(ngModel)]="location.type"
-                            (onChange)="onTypeChange()"
-                            placeholder="Select type"
-                            optionLabel="label"
-                            optionValue="value"
-                            styleClass="w-full"
-                            appendTo="body">
-                        </p-dropdown>
-                    </div>
+                            <div>
+                                <label class="block mb-2 font-semibold">Zone</label>
+                                <div class="flex gap-2">
+                                    <p-dropdown
+                                        [options]="zoneOptions"
+                                        [(ngModel)]="location.zone"
+                                        (onChange)="onZoneChange()"
+                                        placeholder="Seleccionar zona"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        styleClass="w-full"
+                                        appendTo="body">
+                                    </p-dropdown>
+                                    <p-button
+                                        icon="pi pi-plus"
+                                        [rounded]="true"
+                                        [outlined]="true"
+                                        (onClick)="showAddZone = true"
+                                        pTooltip="Agregar zona">
+                                    </p-button>
+                                </div>
+                                <div *ngIf="showAddZone" class="flex gap-2 mt-2">
+                                    <input
+                                        pInputText
+                                        [(ngModel)]="newZoneName"
+                                        placeholder="Nombre de la zona"
+                                        class="w-full"
+                                        (keyup.enter)="addZone()" />
+                                    <p-button icon="pi pi-check" severity="success" [rounded]="true" (onClick)="addZone()"></p-button>
+                                    <p-button icon="pi pi-times" severity="secondary" [rounded]="true" [outlined]="true" (onClick)="cancelAddZone()"></p-button>
+                                </div>
+                            </div>
 
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="block mb-2 font-semibold">
-                            Area <span class="text-red-500">*</span>
-                        </label>
-                        <input 
-                            pInputText 
-                            [(ngModel)]="location.area" 
-                            placeholder="Ej: A1"
-                            class="w-full" />
-                    </div>
+                            <div>
+                                <label class="block mb-2 font-semibold">
+                                    Category <span class="text-red-500">*</span>
+                                </label>
+                                <p-dropdown
+                                    [options]="categoryOptions"
+                                    [(ngModel)]="location.category"
+                                    (onChange)="onCategoryChange()"
+                                    placeholder="Select category"
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    styleClass="w-full"
+                                    appendTo="body">
+                                </p-dropdown>
+                            </div>
 
-                    <!-- Row y Bay -->
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="block mb-2 font-semibold">
-                            Row <span class="text-red-500">*</span>
-                        </label>
-                        <input 
-                            pInputText 
-                            type="number"
-                            [(ngModel)]="location.row"
-                            (ngModelChange)="onRowChange()"
-                            placeholder="Ingrese row"
-                            class="w-full" />
-                    </div>
+                            <div>
+                                <label class="block mb-2 font-semibold">
+                                    Type <span class="text-red-500">*</span>
+                                </label>
+                                <p-dropdown
+                                    [options]="typeOptions"
+                                    [(ngModel)]="location.type"
+                                    (onChange)="onTypeChange()"
+                                    placeholder="Select type"
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    styleClass="w-full"
+                                    appendTo="body">
+                                </p-dropdown>
+                            </div>
 
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="block mb-2 font-semibold">
-                            Bay <span class="text-red-500">*</span>
-                        </label>
-                        <input 
-                            pInputText 
-                            type="number"
-                            [(ngModel)]="location.bay"
-                            (ngModelChange)="onBayChange()"
-                            placeholder="Ingrese bay"
-                            class="w-full" />
-                    </div>
-
-                    <!-- Level y Custom Name -->
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="block mb-2 font-semibold">
-                            Level <span class="text-red-500">*</span>
-                        </label>
-                        <input 
-                            pInputText 
-                            type="number"
-                            [(ngModel)]="location.level"
-                            (ngModelChange)="onLevelChange()"
-                            placeholder="Ingrese level"
-                            class="w-full" />
-                    </div>
-
-                    <div class="col-span-12 md:col-span-6">
-                        <label class="block mb-2 font-semibold">
-                            Custom Name
-                        </label>
-                        <div class="flex items-center h-[44px]">
-                            <p-inputSwitch 
-                                [(ngModel)]="location.customName"
-                                (onChange)="onCustomNameChange()">
-                            </p-inputSwitch>
-                            <label class="ml-3">{{ location.customName ? 'Sí' : 'No' }}</label>
                         </div>
-                    </div>
 
-                    <!-- Storage Name -->
-                    <div class="col-span-12">
-                        <label class="block mb-2 font-semibold">
-                            Storage Name <span class="text-red-500">*</span>
-                        </label>
-                        <input 
-                            pInputText 
-                            [(ngModel)]="location.storageName"
-                            [disabled]="!location.customName"
-                            placeholder="Enter location name"
-                            class="w-full" />
-                        <small class="text-surface-600 dark:text-surface-400">
-                            {{ location.customName ? 'Ingrese un nombre personalizado' : 'Se genera automáticamente basado en Type-Row-Bay-Level' }}
-                        </small>
-                    </div>
+                        <!-- Separador vertical -->
+                        <div style="width: 1px; background-color: #e2e8f0; margin: 0 2rem; flex-shrink: 0;"></div>
 
-                    <!-- Content -->
-                    <div class="col-span-12">
-                        <label class="block mb-2 font-semibold">
-                            Content
-                        </label>
-                        <input 
-                            pInputText 
-                            [(ngModel)]="location.content" 
-                            placeholder="Descripción del contenido"
-                            class="w-full" />
-                    </div>
-                </div>
+                        <!-- Columna 2: Area, Row, Bay, Level -->
+                        <div class="flex-1 flex flex-col gap-4">
+
+                        <div>
+                            <label class="block mb-2 font-semibold">
+                                Area <span class="text-red-500">*</span>
+                            </label>
+                            <input
+                                pInputText
+                                [(ngModel)]="location.area"
+                                (ngModelChange)="onAreaChange()"
+                                placeholder="Ej: A1"
+                                class="w-full" />
+                        </div>
+
+                        <div>
+                            <label class="block mb-2 font-semibold">
+                                Row <span class="text-red-500">*</span>
+                            </label>
+                            <input
+                                pInputText
+                                type="number"
+                                [(ngModel)]="location.row"
+                                (ngModelChange)="onRowChange()"
+                                min="0"
+                                max="1000000"
+                                placeholder="0 - 1,000,000"
+                                class="w-full" />
+                        </div>
+
+                        <div>
+                            <label class="block mb-2 font-semibold">
+                                Bay <span class="text-red-500">*</span>
+                            </label>
+                            <input
+                                pInputText
+                                type="number"
+                                [(ngModel)]="location.bay"
+                                (ngModelChange)="onBayChange()"
+                                min="0"
+                                max="1000000"
+                                placeholder="0 - 1,000,000"
+                                class="w-full" />
+                        </div>
+
+                        <div>
+                            <label class="block mb-2 font-semibold">
+                                Level <span class="text-red-500">*</span>
+                            </label>
+                            <p-dropdown
+                                [options]="levelOptions"
+                                [(ngModel)]="location.level"
+                                (onChange)="onLevelChange()"
+                                placeholder="Seleccionar nivel"
+                                optionLabel="label"
+                                optionValue="value"
+                                styleClass="w-full"
+                                appendTo="body">
+                            </p-dropdown>
+                        </div>
+
+                        </div><!-- fin columna 2 -->
+
+                    </div><!-- fin flex contenedor columnas -->
+
+                    <!-- Formato + Storage Name (lado a lado) -->
+                    <div class="col-span-12 flex gap-0" style="border-top: 1px solid #e2e8f0; padding-top: 1.25rem;">
+
+                        <!-- Formato del nombre -->
+                        <div class="flex-1">
+                            <label class="block mb-2 font-semibold">Formato del nombre</label>
+                            <div class="flex gap-2 flex-wrap mb-2" style="height: 28px; overflow: hidden; align-items: center;">
+                                <span
+                                    *ngFor="let token of availableTokens"
+                                    (click)="insertToken(token)"
+                                    class="cursor-pointer text-xs font-mono px-2 rounded"
+                                    style="background:#e8f0fe; color:#1a4fa0; border: 1px solid #b3c6f5; user-select:none; line-height: 22px; flex-shrink:0;"
+                                    [pTooltip]="'Insertar ' + token">
+                                    {{ token }}
+                                </span>
+                            </div>
+                            <input
+                                pInputText
+                                [(ngModel)]="storageNameFormat"
+                                (ngModelChange)="onFormatChange()"
+                                [disabled]="location.customName"
+                                placeholder="Ej: UBX-{Area}/{Row}-{Bay}-{Level}"
+                                class="w-full font-mono" />
+                            <small class="text-surface-500">Escribe texto libre y haz clic en los tokens para insertarlos</small>
+                        </div>
+
+                        <!-- Storage Name resultado -->
+                        <div class="flex-1" style="padding-left: 2rem;">
+                            <label class="block mb-2 font-semibold">
+                                Storage Name <span class="text-red-500">*</span>
+                            </label>
+                            <div class="flex items-center gap-2 mb-2" style="height: 28px; overflow: hidden;">
+                                <input
+                                    type="checkbox"
+                                    [checked]="location.customName"
+                                    (change)="location.customName = !location.customName; onCustomNameChange()"
+                                    id="customNameCheck"
+                                    style="width:16px; height:16px; cursor:pointer; accent-color:#1a4fa0;" />
+                                <label for="customNameCheck" class="text-sm text-surface-600 dark:text-surface-400 cursor-pointer">
+                                    Custom Name
+                                </label>
+                            </div>
+                            <input
+                                pInputText
+                                [(ngModel)]="location.storageName"
+                                [disabled]="!location.customName"
+                                placeholder="Se genera automáticamente"
+                                class="w-full font-mono" />
+                        </div>
+
+                    </div><!-- fin formato + storage name -->
+                </div><!-- fin grid card -->
             </p-card>
         </div>
 
         <!-- Panel Lateral -->
         <div class="col-span-12 lg:col-span-4">
+            <!-- Content -->
+            <p-card header="Content" styleClass="mb-4">
+                <input
+                    pInputText
+                    [(ngModel)]="location.content"
+                    placeholder="Descripción del contenido"
+                    class="w-full" />
+            </p-card>
+
             <p-card header="Estado">
-                <div class="flex items-center">
+                <div class="flex items-center gap-3">
                     <p-inputSwitch [(ngModel)]="location.active"></p-inputSwitch>
-                    <label class="ml-3">
+                    <label>
                         {{ location.active ? 'Activa' : 'Inactiva' }}
                     </label>
                 </div>
             </p-card>
 
             <div class="flex flex-col gap-2 mt-4">
-                <p-button 
+                <p-button
                     [label]="isEditMode ? 'Actualizar Ubicación' : 'Guardar Ubicación'"
                     icon="pi pi-check"
                     (onClick)="saveLocation()"
                     styleClass="w-full"
                     severity="success">
                 </p-button>
-                <p-button 
-                    label="Cancelar" 
+                <p-button
+                    *ngIf="!isEditMode"
+                    label="Guardar y Agregar Bins"
+                    icon="pi pi-box"
+                    (onClick)="saveAndAddBins()"
+                    styleClass="w-full"
+                    severity="info">
+                </p-button>
+                <p-button
+                    label="Cancelar"
                     icon="pi pi-times"
                     (onClick)="goBack()"
                     styleClass="w-full"
@@ -194,3 +267,10 @@
         </div>
     </div>
 </div>
+
+<app-bin-generator
+    [visible]="showBinDialog"
+    [locationId]="newlyCreatedLocationId"
+    (onGenerate)="goBack()"
+    (visibleChange)="onBinDialogVisibilityChange($event)">
+</app-bin-generator>

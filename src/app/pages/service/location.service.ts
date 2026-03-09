@@ -132,12 +132,14 @@ export class LocationService {
         }
     }
 
-    async updateBinQty(locationId: string, qty: number): Promise<boolean> {
-        const location = this.locations().find(loc => loc.id === locationId);
-        if (!location) return false;
-
-        const updated = await this.updateLocation(locationId, { ...location, binQty: qty });
-        return updated !== null;
+    updateBinQty(locationId: string, qty: number): void {
+        const current = this.locations();
+        const index = current.findIndex(loc => loc.id === locationId);
+        if (index !== -1) {
+            const updated = [...current];
+            updated[index] = { ...updated[index], binQty: qty };
+            this.locations.set(updated);
+        }
     }
 
     // Métodos de filtrado (client-side)

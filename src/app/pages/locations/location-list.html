@@ -13,6 +13,8 @@
             </p-button>
             <p-button label="Generador" icon="pi pi-cog" (onClick)="openGenerator()" styleClass="p-button-info">
             </p-button>
+            <p-button label="Diseñador" icon="pi pi-map" (onClick)="openDesigner()" styleClass="p-button-secondary">
+            </p-button>
             <p-iconfield>
                 <p-inputicon styleClass="pi pi-search" />
                 <input pInputText type="text" [(ngModel)]="searchValue" (input)="onSearch()"
@@ -53,7 +55,7 @@
             <tr>
                 <td>
                     <p-button icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" size="small"
-                        (onClick)="menu.toggle($event); menuItems = getMenuItems(location)">
+                        (onClick)="menuItems = getMenuItems(location); menu.toggle($event)">
                     </p-button>
                 </td>
                 <td>{{ location.zone }}</td>
@@ -61,10 +63,10 @@
                     <span class="font-semibold text-primary">{{ location.storageName }}</span>
                 </td>
                 <td class="text-center">
-                    <p-button *ngIf="location.binQty > 0" [label]="location.binQty.toString()" icon="pi pi-box"
+                    <p-button *ngIf="(location.binQty ?? 0) > 0" [label]="(location.binQty ?? 0).toString()" icon="pi pi-box"
                         (onClick)="viewBins(location.id!)" [text]="true" severity="info" size="small">
                     </p-button>
-                    <span *ngIf="location.binQty === 0" class="text-surface-400">0</span>
+                    <span *ngIf="!(location.binQty > 0)" class="text-surface-400">0</span>
                 </td>
                 <td>{{ location.content || '-' }}</td>
                 <td>
@@ -92,3 +94,195 @@
 </div>
 
 <p-menu #menu [model]="menuItems" [popup]="true" appendTo="body"></p-menu>
+
+<!-- New Bin Dialog -->
+<p-dialog
+    [(visible)]="showNewBinDialog"
+    [modal]="true"
+    [closable]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: '520px' }"
+    (onHide)="closeNewBinDialog()">
+
+    <ng-template pTemplate="header">
+        <div class="w-full" style="padding: 0.5rem 0.25rem;">
+            <div class="flex items-center gap-2 mb-2">
+                <i class="pi pi-box" style="color: #1a4fa0; font-size: 1.25rem;"></i>
+                <span class="font-bold text-xl">Nuevo Bin</span>
+            </div>
+            <div *ngIf="selectedLocation" class="text-sm text-surface-500 mb-6">
+                Ubicación: <span class="font-semibold text-primary">{{ selectedLocation.storageName }}</span>
+            </div>
+            <p-selectButton
+                [options]="binModeOptions"
+                [(ngModel)]="binDialogMode"
+                optionLabel="label"
+                optionValue="value"
+                styleClass="w-full">
+            </p-selectButton>
+        </div>
+    </ng-template>
+
+    <!-- MODO INDIVIDUAL -->
+    <div *ngIf="binDialogMode === 'single'" class="flex flex-col gap-4 pt-2">
+
+        <div>
+            <label class="block mb-2 font-semibold">
+                Bin Name <span class="text-red-500">*</span>
+            </label>
+            <input
+                pInputText
+                [(ngModel)]="newBin.binName"
+                placeholder="Ej: BIN-001"
+                class="w-full"
+                (keyup.enter)="saveBin()" />
+        </div>
+
+        <div>
+            <label class="block mb-2 font-semibold">Capacity</label>
+            <p-inputNumber
+                [(ngModel)]="newBin.capacity"
+                [min]="0"
+                [showButtons]="true"
+                buttonLayout="horizontal"
+                decrementButtonClass="p-button-outlined"
+                incrementButtonClass="p-button-outlined"
+                incrementButtonIcon="pi pi-plus"
+                decrementButtonIcon="pi pi-minus"
+                placeholder="Capacidad máxima"
+                styleClass="w-full">
+            </p-inputNumber>
+        </div>
+
+        <div>
+            <label class="block mb-2 font-semibold">Current Stock</label>
+            <p-inputNumber [ngModel]="0" [disabled]="true" styleClass="w-full"></p-inputNumber>
+            <small class="text-surface-500">El stock inicial siempre es 0</small>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <p-inputSwitch [(ngModel)]="newBin.active"></p-inputSwitch>
+            <label>{{ newBin.active ? 'Activo' : 'Inactivo' }}</label>
+        </div>
+
+    </div>
+
+    <!-- MODO MASIVO -->
+    <div *ngIf="binDialogMode === 'bulk'" class="flex flex-col gap-4 pt-2">
+
+        <!-- Prefijo (fila completa) -->
+        <div>
+            <label class="block mb-2 font-semibold">Prefijo <span class="text-red-500">*</span></label>
+            <input pInputText [(ngModel)]="bulkPrefix" placeholder="BIN" class="w-full font-mono" />
+        </div>
+
+        <!-- Desde / Hasta (dos columnas iguales) -->
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block mb-2 font-semibold">Desde</label>
+                <p-inputNumber
+                    [(ngModel)]="bulkStartNumber"
+                    [min]="1"
+                    [showButtons]="true"
+                    buttonLayout="horizontal"
+                    decrementButtonClass="p-button-outlined"
+                    incrementButtonClass="p-button-outlined"
+                    incrementButtonIcon="pi pi-plus"
+                    decrementButtonIcon="pi pi-minus"
+                    styleClass="w-full">
+                </p-inputNumber>
+            </div>
+            <div>
+                <label class="block mb-2 font-semibold">Hasta</label>
+                <p-inputNumber
+                    [(ngModel)]="bulkEndNumber"
+                    [min]="1"
+                    [showButtons]="true"
+                    buttonLayout="horizontal"
+                    decrementButtonClass="p-button-outlined"
+                    incrementButtonClass="p-button-outlined"
+                    incrementButtonIcon="pi pi-plus"
+                    decrementButtonIcon="pi pi-minus"
+                    styleClass="w-full">
+                </p-inputNumber>
+            </div>
+        </div>
+
+        <!-- Capacity / Activo (dos columnas iguales) -->
+        <div class="grid grid-cols-2 gap-4 items-end">
+            <div>
+                <label class="block mb-2 font-semibold">Capacity</label>
+                <p-inputNumber
+                    [(ngModel)]="bulkCapacity"
+                    [min]="0"
+                    [showButtons]="true"
+                    buttonLayout="horizontal"
+                    decrementButtonClass="p-button-outlined"
+                    incrementButtonClass="p-button-outlined"
+                    incrementButtonIcon="pi pi-plus"
+                    decrementButtonIcon="pi pi-minus"
+                    placeholder="Opcional"
+                    styleClass="w-full">
+                </p-inputNumber>
+            </div>
+            <div class="flex items-center gap-3 pb-1">
+                <p-inputSwitch [(ngModel)]="bulkActive"></p-inputSwitch>
+                <label>{{ bulkActive ? 'Activos' : 'Inactivos' }}</label>
+            </div>
+        </div>
+
+        <!-- Separador -->
+        <div style="border-top: 1px solid #e2e8f0;"></div>
+
+        <!-- Formato del nombre -->
+        <div>
+            <label class="block mb-2 font-semibold">Formato del nombre</label>
+            <div class="flex gap-2 mb-2">
+                <span
+                    *ngFor="let token of bulkTokens"
+                    (click)="insertBulkToken(token)"
+                    class="cursor-pointer text-xs font-mono px-2 py-1 rounded"
+                    style="background:#e8f0fe; color:#1a4fa0; border: 1px solid #b3c6f5; user-select:none;">
+                    {{ token }}
+                </span>
+            </div>
+            <input
+                pInputText
+                [(ngModel)]="bulkNameFormat"
+                placeholder="Ej: {Prefix}-{Number}"
+                class="w-full font-mono" />
+            <small class="text-surface-500">Haz clic en los tokens para insertarlos en el formato</small>
+        </div>
+
+        <!-- Vista previa -->
+        <div>
+            <label class="block mb-2 font-semibold">Vista previa</label>
+            <input
+                pInputText
+                [ngModel]="bulkPreview"
+                [disabled]="true"
+                class="w-full font-mono" />
+        </div>
+
+    </div>
+
+    <ng-template pTemplate="footer">
+        <div class="flex gap-2 justify-end">
+            <p-button
+                label="Cancelar"
+                icon="pi pi-times"
+                [outlined]="true"
+                (onClick)="closeNewBinDialog()">
+            </p-button>
+            <p-button
+                [label]="binDialogMode === 'bulk' ? 'Crear ' + bulkTotal + ' Bins' : 'Guardar Bin'"
+                icon="pi pi-check"
+                severity="success"
+                [loading]="savingBin"
+                (onClick)="saveBin()">
+            </p-button>
+        </div>
+    </ng-template>
+
+</p-dialog>

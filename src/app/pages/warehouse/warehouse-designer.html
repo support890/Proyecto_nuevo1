@@ -1,0 +1,915 @@
+<p-toast></p-toast>
+
+<div class="dw-wrap">
+
+    <!-- ======================== TOP BAR ======================== -->
+    <div class="dw-topbar">
+        <button class="dw-btn" (click)="goBack()" pTooltip="Volver a Ubicaciones" tooltipPosition="bottom">
+            <i class="pi pi-arrow-left"></i>
+        </button>
+
+        <nav class="dw-breadcrumb">
+            <span>Inventario</span>
+            <span>/</span>
+            <span>Ubicaciones</span>
+            <span>/</span>
+            <span class="dw-bc-active">Diseñador de Almacén</span>
+        </nav>
+
+        <div class="dw-spacer"></div>
+
+        <button class="dw-btn" (click)="openZoneManager()" pTooltip="Gestionar Zonas y Colores"
+            tooltipPosition="bottom">
+            <i class="pi pi-palette" style="color: #7c3aed;"></i>
+            <span>Zonas</span>
+        </button>
+
+        <button class="dw-btn" (click)="clearCanvas()" [disabled]="items.length === 0" pTooltip="Limpiar canvas"
+            tooltipPosition="bottom">
+            <i class="pi pi-trash"></i>
+            <span>Limpiar</span>
+        </button>
+
+        <button class="dw-btn" (click)="undo()" [disabled]="history.length === 0" pTooltip="Deshacer  (Ctrl+Z)"
+            tooltipPosition="bottom">
+            <i class="pi pi-undo"></i>
+            <span>Deshacer</span>
+        </button>
+
+        <button class="dw-btn primary" (click)="saveLayout()">
+            <i class="pi pi-save"></i>
+            <span>Guardar</span>
+        </button>
+    </div>
+
+    <!-- ======================== MAIN AREA ======================== -->
+    <div class="dw-main">
+
+        <!-- ---- Left Toolbar ---- -->
+        <div class="dw-toolbar">
+            <ng-container *ngFor="let tool of tools">
+                <div class="dw-tool-sep" *ngIf="tool.sep"></div>
+                <button class="dw-tool" [class.active]="activeTool === tool.id" (click)="setTool(tool.id)"
+                    [pTooltip]="tool.label" tooltipPosition="right">
+                    <i [class]="tool.icon"></i>
+                </button>
+            </ng-container>
+        </div>
+
+        <!-- ---- SVG Canvas ---- -->
+        <div class="dw-canvas-wrap" #canvasWrap>
+            <svg #svgEl class="dw-svg" [class.c-draw]="activeTool !== 'select' && !spaceDown"
+                [class.c-pan]="spaceDown && !isPanning" [class.c-panning]="isPanning"
+                [class.c-select]="activeTool === 'select' && !spaceDown" (mousedown)="onCanvasMouseDown($event)"
+                (mousemove)="onCanvasMouseMove($event)" (mouseup)="onCanvasMouseUp($event)"
+                (mouseleave)="onCanvasMouseUp($event)">
+
+                <defs>
+                    <!-- Dot grid pattern — follows pan + zoom -->
+                    <pattern id="dwDotGrid" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"
+                        [attr.patternTransform]="gridTransform">
+                        <circle cx="0" cy="0" r="0.85" fill="#c5cad3" />
+                    </pattern>
+                </defs>
+
+                <!-- Background -->
+                <rect width="100%" height="100%" fill="url(#dwDotGrid)" />
+
+                <!-- ===== Main transformed group (pan + zoom) ===== -->
+                <g [attr.transform]="gridTransform">
+
+                    <!-- Render frames first (behind everything) -->
+                    <ng-container *ngFor="let item of items">
+                        <g *ngIf="item.type === 'frame'" class="dw-item" (mousedown)="onItemMouseDown($event, item)">
+                            <rect [attr.x]="item.x" [attr.y]="item.y" [attr.width]="item.w" [attr.height]="item.h"
+                                fill="rgba(245,245,245,0.3)" [attr.stroke]="strokeOf(item)"
+                                [attr.stroke-width]="strokeWidthOf(item)" stroke-dasharray="10 5" rx="6" />
+                            <text [attr.x]="item.x + 10" [attr.y]="item.y - 6" [attr.fill]="textFillOf(item)"
+                                class="item-lbl" font-size="11">{{ item.label }}</text>
+
+                            <!-- Selection handles -->
+                            <ng-container *ngIf="selectedId === item.id">
+                                <!-- Corners -->
+                                <rect [attr.x]="item.x - 4" [attr.y]="item.y - 4" width="8" height="8" fill="white"
+                                    stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nwse-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'tl', item)" />
+                                <rect [attr.x]="item.x + item.w - 4" [attr.y]="item.y - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nesw-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'tr', item)" />
+                                <rect [attr.x]="item.x - 4" [attr.y]="item.y + item.h - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nesw-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'bl', item)" />
+                                <rect [attr.x]="item.x + item.w - 4" [attr.y]="item.y + item.h - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nwse-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'br', item)" />
+                                <!-- Midpoints -->
+                                <rect [attr.x]="item.x + item.w/2 - 4" [attr.y]="item.y - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: ns-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'tm', item)" />
+                                <rect [attr.x]="item.x + item.w/2 - 4" [attr.y]="item.y + item.h - 4" width="8"
+                                    height="8" fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1"
+                                    style="cursor: ns-resize;" (mousedown)="onHandleMouseDown($event, 'bm', item)" />
+                                <rect [attr.x]="item.x - 4" [attr.y]="item.y + item.h/2 - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: ew-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'lm', item)" />
+                                <rect [attr.x]="item.x + item.w - 4" [attr.y]="item.y + item.h/2 - 4" width="8"
+                                    height="8" fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1"
+                                    style="cursor: ew-resize;" (mousedown)="onHandleMouseDown($event, 'rm', item)" />
+                            </ng-container>
+                        </g>
+                    </ng-container>
+
+                    <!-- Render zones -->
+                    <ng-container *ngFor="let item of items">
+                        <g *ngIf="item.type === 'zone'" class="dw-item" (mousedown)="onItemMouseDown($event, item)">
+                            <rect [attr.x]="item.x" [attr.y]="item.y" [attr.width]="item.w" [attr.height]="item.h"
+                                [attr.fill]="item.color" fill-opacity="0.45" [attr.stroke]="strokeOf(item)"
+                                [attr.stroke-width]="strokeWidthOf(item)" rx="6" />
+                            <text [attr.x]="item.x + 12" [attr.y]="item.y + 20" [attr.fill]="textFillOf(item)"
+                                class="item-lbl" font-size="13" font-weight="600">{{ item.label }}</text>
+
+                            <ng-container *ngIf="selectedId === item.id">
+                                <rect [attr.x]="item.x - 4" [attr.y]="item.y - 4" width="8" height="8" fill="white"
+                                    stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nwse-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'tl', item)" />
+                                <rect [attr.x]="item.x + item.w - 4" [attr.y]="item.y - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nesw-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'tr', item)" />
+                                <rect [attr.x]="item.x - 4" [attr.y]="item.y + item.h - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nesw-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'bl', item)" />
+                                <rect [attr.x]="item.x + item.w - 4" [attr.y]="item.y + item.h - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nwse-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'br', item)" />
+                                <rect [attr.x]="item.x + item.w/2 - 4" [attr.y]="item.y - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: ns-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'tm', item)" />
+                                <rect [attr.x]="item.x + item.w/2 - 4" [attr.y]="item.y + item.h - 4" width="8"
+                                    height="8" fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1"
+                                    style="cursor: ns-resize;" (mousedown)="onHandleMouseDown($event, 'bm', item)" />
+                                <rect [attr.x]="item.x - 4" [attr.y]="item.y + item.h/2 - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: ew-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'lm', item)" />
+                                <rect [attr.x]="item.x + item.w - 4" [attr.y]="item.y + item.h/2 - 4" width="8"
+                                    height="8" fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1"
+                                    style="cursor: ew-resize;" (mousedown)="onHandleMouseDown($event, 'rm', item)" />
+                            </ng-container>
+                        </g>
+                    </ng-container>
+
+                    <!-- Render walls -->
+                    <ng-container *ngFor="let item of items">
+                        <g *ngIf="item.type === 'wall'" class="dw-item" (mousedown)="onItemMouseDown($event, item)">
+                            <rect [attr.x]="item.x" [attr.y]="item.y" [attr.width]="item.w" [attr.height]="item.h"
+                                [attr.fill]="item.color" [attr.stroke]="strokeOf(item)"
+                                [attr.stroke-width]="strokeWidthOf(item)" />
+
+                            <ng-container *ngIf="selectedId === item.id">
+                                <rect [attr.x]="item.x - 4" [attr.y]="item.y - 4" width="8" height="8" fill="white"
+                                    stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nwse-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'tl', item)" />
+                                <rect [attr.x]="item.x + item.w - 4" [attr.y]="item.y - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nesw-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'tr', item)" />
+                                <rect [attr.x]="item.x - 4" [attr.y]="item.y + item.h - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nesw-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'bl', item)" />
+                                <rect [attr.x]="item.x + item.w - 4" [attr.y]="item.y + item.h - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nwse-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'br', item)" />
+                                <rect [attr.x]="item.x + item.w/2 - 4" [attr.y]="item.y - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: ns-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'tm', item)" />
+                                <rect [attr.x]="item.x + item.w/2 - 4" [attr.y]="item.y + item.h - 4" width="8"
+                                    height="8" fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1"
+                                    style="cursor: ns-resize;" (mousedown)="onHandleMouseDown($event, 'bm', item)" />
+                            </ng-container>
+                        </g>
+                    </ng-container>
+
+                    <!-- Render dock doors -->
+                    <ng-container *ngFor="let item of items">
+                        <g *ngIf="item.type === 'dockdoor'" class="dw-item" (mousedown)="onItemMouseDown($event, item)">
+                            <rect [attr.x]="item.x" [attr.y]="item.y" [attr.width]="item.w" [attr.height]="item.h"
+                                [attr.fill]="item.color" [attr.stroke]="strokeOf(item)"
+                                [attr.stroke-width]="strokeWidthOf(item)" rx="3" />
+                            <!-- Door opening indicator -->
+                            <line [attr.x1]="item.x + item.w * 0.15" [attr.y1]="item.y + item.h - 4"
+                                [attr.x2]="item.x + item.w * 0.85" [attr.y2]="item.y + item.h - 4"
+                                [attr.stroke]="strokeOf(item)" stroke-width="4" stroke-linecap="round" />
+                            <text [attr.x]="item.x + item.w / 2" [attr.y]="item.y + item.h / 2 + 4" text-anchor="middle"
+                                [attr.fill]="textFillOf(item)" class="item-lbl" font-size="10">{{ item.label }}</text>
+
+                            <ng-container *ngIf="selectedId === item.id">
+                                <rect [attr.x]="item.x - 4" [attr.y]="item.y - 4" width="8" height="8" fill="white"
+                                    stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nwse-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'tl', item)" />
+                                <rect [attr.x]="item.x + item.w - 4" [attr.y]="item.y - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nesw-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'tr', item)" />
+                                <rect [attr.x]="item.x - 4" [attr.y]="item.y + item.h - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nesw-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'bl', item)" />
+                                <rect [attr.x]="item.x + item.w - 4" [attr.y]="item.y + item.h - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nwse-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'br', item)" />
+                                <rect [attr.x]="item.x + item.w/2 - 4" [attr.y]="item.y - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: ns-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'tm', item)" />
+                                <rect [attr.x]="item.x + item.w/2 - 4" [attr.y]="item.y + item.h - 4" width="8"
+                                    height="8" fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1"
+                                    style="cursor: ns-resize;" (mousedown)="onHandleMouseDown($event, 'bm', item)" />
+                            </ng-container>
+                        </g>
+                    </ng-container>
+
+                    <!-- Render locations -->
+                    <ng-container *ngFor="let item of items">
+                        <g *ngIf="item.type === 'location'" class="dw-item" (mousedown)="onItemMouseDown($event, item)">
+                            <!-- Zona color fill -->
+                            <rect [attr.x]="item.x" [attr.y]="item.y" [attr.width]="item.w" [attr.height]="item.h"
+                                [attr.fill]="zoneColorOf(item)" [attr.stroke]="strokeOf(item)"
+                                [attr.stroke-width]="strokeWidthOf(item)" rx="3" />
+                            <!-- Franja de zona en la parte superior -->
+                            <rect *ngIf="item.zoneId" [attr.x]="item.x" [attr.y]="item.y" [attr.width]="item.w"
+                                height="5" [attr.fill]="strokeOf(item)" rx="1" opacity="0.6" />
+                            <!-- Franja de categoría si no tiene zona -->
+                            <rect *ngIf="!item.zoneId" [attr.x]="item.x" [attr.y]="item.y" [attr.width]="item.w"
+                                height="4" [attr.fill]="categoryColor(item.category)" rx="1" />
+                            <!-- Indicador de vinculación DB -->
+                            <circle *ngIf="item.linkedId" [attr.cx]="item.x + item.w - 6" [attr.cy]="item.y + 6" r="4"
+                                fill="#1a4fa0" opacity="0.85" />
+                            <text [attr.x]="item.x + item.w / 2" [attr.y]="item.y + item.h / 2 + 4" text-anchor="middle"
+                                [attr.fill]="textFillOf(item)" class="item-lbl" font-size="10">{{ item.label }}</text>
+
+                            <ng-container *ngIf="selectedId === item.id">
+                                <!-- Corners -->
+                                <rect [attr.x]="item.x - 4" [attr.y]="item.y - 4" width="8" height="8" fill="white"
+                                    stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nwse-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'tl', item)" />
+                                <rect [attr.x]="item.x + item.w - 4" [attr.y]="item.y - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nesw-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'tr', item)" />
+                                <rect [attr.x]="item.x - 4" [attr.y]="item.y + item.h - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nesw-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'bl', item)" />
+                                <rect [attr.x]="item.x + item.w - 4" [attr.y]="item.y + item.h - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nwse-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'br', item)" />
+                                <!-- Midpoints -->
+                                <rect [attr.x]="item.x + item.w/2 - 4" [attr.y]="item.y - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: ns-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'tm', item)" />
+                                <rect [attr.x]="item.x + item.w/2 - 4" [attr.y]="item.y + item.h - 4" width="8"
+                                    height="8" fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1"
+                                    style="cursor: ns-resize;" (mousedown)="onHandleMouseDown($event, 'bm', item)" />
+                                <rect [attr.x]="item.x - 4" [attr.y]="item.y + item.h/2 - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: ew-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'lm', item)" />
+                                <rect [attr.x]="item.x + item.w - 4" [attr.y]="item.y + item.h/2 - 4" width="8"
+                                    height="8" fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1"
+                                    style="cursor: ew-resize;" (mousedown)="onHandleMouseDown($event, 'rm', item)" />
+                            </ng-container>
+                        </g>
+                    </ng-container>
+
+                    <!-- Render bins -->
+                    <ng-container *ngFor="let item of items">
+                        <g *ngIf="item.type === 'bin'" class="dw-item" (mousedown)="onItemMouseDown($event, item)">
+                            <rect [attr.x]="item.x" [attr.y]="item.y" [attr.width]="item.w" [attr.height]="item.h"
+                                [attr.fill]="item.color" [attr.stroke]="strokeOf(item)"
+                                [attr.stroke-width]="strokeWidthOf(item)" rx="2" />
+                            <!-- Linked badge mark -->
+                            <circle *ngIf="item.linkedId" [attr.cx]="item.x + item.w - 5" [attr.cy]="item.y + 5" r="3.5"
+                                fill="#1a4fa0" />
+                            <text [attr.x]="item.x + item.w / 2" [attr.y]="item.y + item.h / 2 + 3" text-anchor="middle"
+                                [attr.fill]="textFillOf(item)" class="item-lbl" font-size="8">{{ item.label }}</text>
+
+                            <ng-container *ngIf="selectedId === item.id">
+                                <rect [attr.x]="item.x - 4" [attr.y]="item.y - 4" width="8" height="8" fill="white"
+                                    stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nwse-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'tl', item)" />
+                                <rect [attr.x]="item.x + item.w - 4" [attr.y]="item.y - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nesw-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'tr', item)" />
+                                <rect [attr.x]="item.x - 4" [attr.y]="item.y + item.h - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nesw-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'bl', item)" />
+                                <rect [attr.x]="item.x + item.w - 4" [attr.y]="item.y + item.h - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: nwse-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'br', item)" />
+                                <!-- Midpoints -->
+                                <rect [attr.x]="item.x + item.w/2 - 4" [attr.y]="item.y - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: ns-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'tm', item)" />
+                                <rect [attr.x]="item.x + item.w/2 - 4" [attr.y]="item.y + item.h - 4" width="8"
+                                    height="8" fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1"
+                                    style="cursor: ns-resize;" (mousedown)="onHandleMouseDown($event, 'bm', item)" />
+                                <rect [attr.x]="item.x - 4" [attr.y]="item.y + item.h/2 - 4" width="8" height="8"
+                                    fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1" style="cursor: ew-resize;"
+                                    (mousedown)="onHandleMouseDown($event, 'lm', item)" />
+                                <rect [attr.x]="item.x + item.w - 4" [attr.y]="item.y + item.h/2 - 4" width="8"
+                                    height="8" fill="white" stroke="#1a4fa0" stroke-width="1.5" rx="1"
+                                    style="cursor: ew-resize;" (mousedown)="onHandleMouseDown($event, 'rm', item)" />
+                            </ng-container>
+                        </g>
+                    </ng-container>
+
+                    <!-- Drawing draft overlay -->
+                    <rect *ngIf="draft && draft.w > 4 && draft.h > 4" [attr.x]="draft.x" [attr.y]="draft.y"
+                        [attr.width]="draft.w" [attr.height]="draft.h" [attr.fill]="getDraftColor()" fill-opacity="0.35"
+                        [attr.stroke]="getDraftStroke()" stroke-width="1.5" stroke-dasharray="6 3" rx="2" />
+
+                </g>
+            </svg>
+        </div>
+
+        <!-- ======================== RIGHT PANEL ======================== -->
+
+        <!-- Properties (item selected) -->
+        <div class="dw-props" *ngIf="selectedItem">
+
+            <!-- Panel header -->
+            <div class="dw-props-head">
+                <div class="dw-props-type-badge" [style.background]="typeBadgeColor(selectedItem.type)">
+                    <i [class]="typeIcon(selectedItem.type)"></i>
+                    <span>{{ typeName(selectedItem.type) }}</span>
+                </div>
+                <button class="dw-btn danger" style="padding: 4px 8px;" (click)="deleteSelected()"
+                    pTooltip="Eliminar (Delete)" tooltipPosition="left">
+                    <i class="pi pi-trash" style="font-size: 0.8rem;"></i>
+                </button>
+            </div>
+
+            <div class="dw-props-body">
+
+                <!-- Label -->
+                <div class="dw-prop">
+                    <label>Nombre</label>
+                    <input pInputText [(ngModel)]="selectedItem.label" class="w-full" style="font-size: 0.85rem;" />
+                </div>
+
+                <!-- Color -->
+                <div class="dw-prop" *ngIf="selectedItem.type !== 'frame'">
+                    <label>Color</label>
+                    <div class="flex gap-2 align-items-center">
+                        <p-colorPicker [(ngModel)]="selectedItem.color" format="hex" appendTo="body"></p-colorPicker>
+                        <div class="color-preview" [style.background]="'#' + selectedItem.color"></div>
+                        <span style="font-family: monospace; font-size: 0.8rem;">
+                            #{{ selectedItem.color }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Category (locations only) -->
+                <div class="dw-prop" *ngIf="selectedItem.type === 'location'">
+                    <label>Categoría</label>
+                    <p-dropdown [options]="categoryOptions" [(ngModel)]="selectedItem.category"
+                        placeholder="Seleccionar..." styleClass="w-full" appendTo="body" />
+                </div>
+
+                <!-- Zona (locations only) -->
+                <div class="dw-prop" *ngIf="selectedItem.type === 'location'">
+                    <label>
+                        <i class="pi pi-palette" style="margin-right:4px;"></i>
+                        Zona
+                    </label>
+
+                    <!-- Zona asignada -->
+                    <ng-container *ngIf="selectedItem.zoneId; else noZoneAssigned">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <div style="width:14px;height:14px;border-radius:3px;flex-shrink:0;"
+                                [style.background]="getZoneColor(selectedItem.zoneId)"></div>
+                            <span style="font-size:0.82rem; font-weight:600; flex:1;">
+                                {{ getZoneName(selectedItem.zoneId) }}
+                            </span>
+                            <button class="dw-btn" style="padding:3px 8px; font-size:0.76rem;"
+                                (click)="removeZoneFromItem(selectedItem)" pTooltip="Quitar zona" tooltipPosition="top">
+                                <i class="pi pi-times"></i>
+                            </button>
+                        </div>
+                    </ng-container>
+
+                    <ng-template #noZoneAssigned>
+                        <div *ngIf="zones.length === 0" class="dw-info-msg" style="margin-bottom:6px;">
+                            <i class="pi pi-info-circle"></i>
+                            <span>Primero crea zonas con el botón "Gestionar Zonas".</span>
+                        </div>
+                        <p-dropdown *ngIf="zones.length > 0" [options]="zoneOptions" [ngModel]="selectedItem.zoneId"
+                            (ngModelChange)="assignZone(selectedItem, $event)" placeholder="Asignar zona..."
+                            styleClass="w-full" appendTo="body">
+                            <ng-template pTemplate="option" let-opt>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <span style="width:12px;height:12px;border-radius:2px;display:inline-block;"
+                                        [style.background]="getZoneColor(opt.value)"></span>
+                                    <span>{{ opt.label }}</span>
+                                </div>
+                            </ng-template>
+                        </p-dropdown>
+                    </ng-template>
+                </div>
+
+                <!-- Active toggle -->
+                <div class="dw-prop" *ngIf="selectedItem.type !== 'wall' && selectedItem.type !== 'frame'">
+                    <label>Estado</label>
+                    <div class="flex align-items-center gap-2">
+                        <p-inputSwitch [(ngModel)]="selectedItem.active"></p-inputSwitch>
+                        <span class="status-chip" [class.active]="selectedItem.active">
+                            <i [class]="selectedItem.active ? 'pi pi-check-circle' : 'pi pi-times-circle'"></i>
+                            {{ selectedItem.active ? 'Activo' : 'Inactivo' }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="dw-divider"></div>
+
+                <!-- ======= VINCULACIÓN A DB: LOCATION ======= -->
+                <ng-container *ngIf="selectedItem.type === 'location'">
+                    <div class="dw-prop">
+                        <label>
+                            <i class="pi pi-link" style="margin-right: 4px;"></i>
+                            Vincular a Ubicación DB
+                        </label>
+
+                        <!-- Already linked -->
+                        <ng-container *ngIf="selectedItem.linkedId; else linkLocDropdown">
+                            <div class="dw-linked-badge">
+                                <i class="pi pi-map-marker" style="color: #1a4fa0;"></i>
+                                <span class="lbl">{{ linkedLabel(selectedItem) }}</span>
+                                <button class="dw-btn-icon dw-btn" style="width:24px;height:24px;"
+                                    pTooltip="Desvincular" tooltipPosition="top" (click)="unlinkItem(selectedItem)">
+                                    <i class="pi pi-times" style="font-size:0.7rem;"></i>
+                                </button>
+                            </div>
+                            <div class="link-actions" style="margin-top: 6px;">
+                                <button class="dw-btn w-full" style="justify-content:center;"
+                                    (click)="openLocationEdit()">
+                                    <i class="pi pi-pencil"></i>
+                                    <span>Editar ubicación en DB</span>
+                                </button>
+                            </div>
+                        </ng-container>
+
+                        <ng-template #linkLocDropdown>
+                            <p-dropdown [options]="locationOptions" [ngModel]="selectedItem.linkedId"
+                                (ngModelChange)="onLinkLocation(selectedItem, $event)"
+                                placeholder="Seleccionar ubicación..." [filter]="true" filterPlaceholder="Buscar..."
+                                styleClass="w-full" appendTo="body" emptyFilterMessage="No se encontraron ubicaciones">
+                                <ng-template pTemplate="empty">
+                                    <div style="padding: 8px; font-size: 0.8rem; color: #94a3b8; text-align: center;">
+                                        <i class="pi pi-inbox"
+                                            style="display:block; font-size:1.5rem; margin-bottom:4px;"></i>
+                                        Sin ubicaciones en DB
+                                    </div>
+                                </ng-template>
+                            </p-dropdown>
+                        </ng-template>
+                    </div>
+                </ng-container>
+
+                <!-- ======= VINCULACIÓN A DB: BIN ======= -->
+                <ng-container *ngIf="selectedItem.type === 'bin'">
+                    <div class="dw-prop">
+                        <label>
+                            <i class="pi pi-link" style="margin-right: 4px;"></i>
+                            Vincular a Bin DB
+                        </label>
+
+                        <!-- Not inside a linked location -->
+                        <div *ngIf="binOptions.length === 0 && !selectedItem.linkedId" class="dw-info-msg">
+                            <i class="pi pi-info-circle"></i>
+                            <span>El bin debe estar dentro de una Ubicación vinculada a la DB para poder seleccionar un
+                                Bin.</span>
+                        </div>
+
+                        <!-- Already linked -->
+                        <ng-container *ngIf="selectedItem.linkedId; else linkBinDropdown">
+                            <div class="dw-linked-badge">
+                                <i class="pi pi-box" style="color: #1a4fa0;"></i>
+                                <span class="lbl">{{ linkedLabel(selectedItem) }}</span>
+                                <button class="dw-btn-icon dw-btn" style="width:24px;height:24px;"
+                                    pTooltip="Desvincular" tooltipPosition="top" (click)="unlinkItem(selectedItem)">
+                                    <i class="pi pi-times" style="font-size:0.7rem;"></i>
+                                </button>
+                            </div>
+                            <div class="link-actions" style="margin-top: 6px;">
+                                <button class="dw-btn w-full" style="justify-content:center;" (click)="openBinEdit()">
+                                    <i class="pi pi-pencil"></i>
+                                    <span>Editar bin en DB</span>
+                                </button>
+                            </div>
+                        </ng-container>
+
+                        <ng-template #linkBinDropdown>
+                            <p-dropdown *ngIf="binOptions.length > 0" [options]="binOptions"
+                                [ngModel]="selectedItem.linkedId" (ngModelChange)="onLinkBin(selectedItem, $event)"
+                                placeholder="Seleccionar bin..." [filter]="true" filterPlaceholder="Buscar..."
+                                styleClass="w-full" appendTo="body">
+                            </p-dropdown>
+                        </ng-template>
+                    </div>
+                </ng-container>
+
+                <div class="dw-divider"></div>
+
+                <!-- Position & Size -->
+                <div class="dw-prop">
+                    <label>Posición &amp; Tamaño</label>
+                    <div class="pos-grid">
+                        <div class="pos-field">
+                            <span class="pos-lbl">X</span>
+                            <input pInputText type="number" [ngModel]="selectedItem.x"
+                                (ngModelChange)="selectedItem.x = snap($event)" class="w-full"
+                                style="font-size:0.8rem;font-family:monospace;" />
+                        </div>
+                        <div class="pos-field">
+                            <span class="pos-lbl">Y</span>
+                            <input pInputText type="number" [ngModel]="selectedItem.y"
+                                (ngModelChange)="selectedItem.y = snap($event)" class="w-full"
+                                style="font-size:0.8rem;font-family:monospace;" />
+                        </div>
+                        <div class="pos-field">
+                            <span class="pos-lbl">Ancho</span>
+                            <input pInputText type="number" [ngModel]="selectedItem.w"
+                                (ngModelChange)="selectedItem.w = +$event" class="w-full"
+                                style="font-size:0.8rem;font-family:monospace;" />
+                        </div>
+                        <div class="pos-field">
+                            <span class="pos-lbl">Alto</span>
+                            <input pInputText type="number" [ngModel]="selectedItem.h"
+                                (ngModelChange)="selectedItem.h = +$event" class="w-full"
+                                style="font-size:0.8rem;font-family:monospace;" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick actions -->
+                <div class="dw-prop" *ngIf="selectedItem.type === 'location' || selectedItem.type === 'bin'">
+                    <label>Acciones rápidas</label>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <button class="dw-btn" style="justify-content:center; font-size:0.8rem;"
+                            *ngIf="selectedItem.type === 'location'" (click)="duplicateSelected()">
+                            <i class="pi pi-copy"></i>
+                            <span>Duplicar</span>
+                        </button>
+                        <button class="dw-btn danger" style="justify-content:center; font-size:0.8rem;"
+                            (click)="deleteSelected()">
+                            <i class="pi pi-trash"></i>
+                            <span>Eliminar elemento</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Empty state (nothing selected) -->
+        <div class="dw-props" *ngIf="!selectedItem">
+            <div class="dw-props-empty">
+                <i class="pi pi-compass" style="font-size: 2.2rem; opacity: 0.25;"></i>
+                <div>
+                    <div style="font-weight: 600; margin-bottom: 6px; font-size: 0.88rem;">
+                        Sin selección
+                    </div>
+                    <div style="font-size: 0.78rem; line-height: 1.55; opacity: 0.75;">
+                        Elige una herramienta en la barra izquierda y dibuja en el canvas.
+                        Haz clic en un elemento para editarlo.
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div class="dw-legend">
+                    <div class="legend-title">Elementos</div>
+                    <div class="legend-row">
+                        <span class="legend-dot" style="background:#bbdefb; border: 1.5px solid #1565c0;"></span>
+                        <span>Zona</span>
+                    </div>
+                    <div class="legend-row">
+                        <span class="legend-dot" style="background:#c8e6c9; border: 1.5px solid #2e7d32;"></span>
+                        <span>Ubicación</span>
+                    </div>
+                    <div class="legend-row">
+                        <span class="legend-dot" style="background:#fff9c4; border: 1.5px solid #f9a825;"></span>
+                        <span>Bin</span>
+                    </div>
+                    <div class="legend-row">
+                        <span class="legend-dot" style="background:#37474f; border: 1.5px solid #263238;"></span>
+                        <span>Pared</span>
+                    </div>
+                    <div class="legend-row">
+                        <span class="legend-dot" style="background:#ffcc80; border: 1.5px solid #e65100;"></span>
+                        <span>Dock Door</span>
+                    </div>
+                    <div class="legend-row">
+                        <span class="legend-dot" style="background:#f5f5f5; border: 1.5px dashed #bdbdbd;"></span>
+                        <span>Marco / Área</span>
+                    </div>
+                </div>
+
+                <!-- Keyboard shortcuts -->
+                <div class="dw-shortcuts">
+                    <div class="shortcuts-title">Atajos de teclado</div>
+                    <div class="row"><kbd>V</kbd> Seleccionar<span style="flex:1"></span><kbd>Z</kbd> Zona</div>
+                    <div class="row"><kbd>L</kbd> Ubicación<span style="flex:1"></span><kbd>B</kbd> Bin</div>
+                    <div class="row"><kbd>W</kbd> Pared<span style="flex:1"></span><kbd>D</kbd> Dock</div>
+                    <div class="row"><kbd>F</kbd> Marco<span style="flex:1"></span><kbd>Del</kbd> Eliminar</div>
+                    <div class="row"><kbd>Ctrl+Z</kbd> Deshacer<span style="flex:1"></span><kbd>Esc</kbd> Cancelar</div>
+                    <div style="margin-top: 6px; opacity: 0.7;">
+                        <div><kbd>Espacio</kbd> + arrastrar → Pan</div>
+                        <div style="margin-top:3px;"><kbd>Scroll</kbd> → Zoom (centrado en cursor)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ======================== BOTTOM BAR ======================== -->
+    <div class="dw-bottombar">
+        <span class="dw-item-count">
+            {{ items.length }} elemento{{ items.length !== 1 ? 's' : '' }}
+        </span>
+        <span class="dw-item-summary" *ngIf="items.length > 0">
+            &nbsp;·&nbsp;
+            {{ countByType('zone') }} zona{{ countByType('zone') !== 1 ? 's' : '' }},
+            {{ countByType('location') }} ubicacion{{ countByType('location') !== 1 ? 'es' : '' }},
+            {{ countByType('bin') }} bin{{ countByType('bin') !== 1 ? 's' : '' }}
+        </span>
+        <div class="dw-spacer"></div>
+        <div class="dw-zoom-ctrl">
+            <button class="dw-btn dw-btn-icon" (click)="zoomOut()" [disabled]="zoom <= 0.16" pTooltip="Reducir zoom"
+                tooltipPosition="top">
+                <i class="pi pi-minus" style="font-size: 0.75rem;"></i>
+            </button>
+            <span style="font-size: 0.8rem; font-weight: 600; min-width: 46px; text-align: center;">
+                {{ (zoom * 100).toFixed(0) }}%
+            </span>
+            <button class="dw-btn dw-btn-icon" (click)="zoomIn()" [disabled]="zoom >= 3.9" pTooltip="Ampliar zoom"
+                tooltipPosition="top">
+                <i class="pi pi-plus" style="font-size: 0.75rem;"></i>
+            </button>
+            <button class="dw-btn dw-btn-icon" (click)="resetView()" pTooltip="Restablecer vista (100%)"
+                tooltipPosition="top" style="margin-left: 2px;">
+                <i class="pi pi-expand" style="font-size: 0.75rem;"></i>
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<!-- ======================== DIALOG: EDITAR LOCATION ======================== -->
+<p-dialog header="Editar Ubicación" [(visible)]="showLocationEditDlg" [modal]="true" [draggable]="true"
+    [resizable]="false" [style]="{width: '560px'}" appendTo="body">
+
+    <ng-template pTemplate="header">
+        <div style="display:flex; align-items:center; gap: 8px;">
+            <i class="pi pi-map-marker" style="color: #2e7d32; font-size: 1.1rem;"></i>
+            <span style="font-weight: 700;">Editar Ubicación</span>
+        </div>
+    </ng-template>
+
+    <div *ngIf="editingLocation" style="padding-top: 4px;">
+
+        <div class="dlg-grid">
+            <!-- Storage Name -->
+            <div class="dlg-field" style="grid-column: 1 / -1;">
+                <label>Código / Nombre</label>
+                <input pInputText [(ngModel)]="editingLocation.storageName" class="w-full"
+                    placeholder="Ej. REGULAR-001" />
+            </div>
+
+            <!-- Zone -->
+            <div class="dlg-field">
+                <label>Zona</label>
+                <input pInputText [(ngModel)]="editingLocation.zone" class="w-full" placeholder="Ej. A" />
+            </div>
+
+            <!-- Area -->
+            <div class="dlg-field">
+                <label>Área</label>
+                <input pInputText [(ngModel)]="editingLocation.area" class="w-full" placeholder="Ej. 01" />
+            </div>
+
+            <!-- Category -->
+            <div class="dlg-field">
+                <label>Categoría</label>
+                <p-dropdown [options]="categoryOptions" [(ngModel)]="editingLocation.category" styleClass="w-full"
+                    appendTo="body" placeholder="Seleccionar..." />
+            </div>
+
+            <!-- Type -->
+            <div class="dlg-field">
+                <label>Tipo</label>
+                <p-dropdown [options]="typeOptions" [(ngModel)]="editingLocation.type" styleClass="w-full"
+                    appendTo="body" placeholder="Seleccionar..." />
+            </div>
+
+            <!-- Row -->
+            <div class="dlg-field">
+                <label>Fila (Row)</label>
+                <input pInputText [(ngModel)]="editingLocation.row" class="w-full" placeholder="Ej. 01" />
+            </div>
+
+            <!-- Bay -->
+            <div class="dlg-field">
+                <label>Bahía (Bay)</label>
+                <input pInputText [(ngModel)]="editingLocation.bay" class="w-full" placeholder="Ej. 02" />
+            </div>
+
+            <!-- Level -->
+            <div class="dlg-field">
+                <label>Nivel</label>
+                <p-dropdown [options]="levelOptions" [(ngModel)]="editingLocation.level" styleClass="w-full"
+                    appendTo="body" placeholder="A-Z" />
+            </div>
+
+            <!-- BinQty -->
+            <div class="dlg-field">
+                <label>Cantidad de Bins</label>
+                <p-inputNumber [(ngModel)]="editingLocation.binQty" [min]="0" [max]="9999" styleClass="w-full" />
+            </div>
+
+            <!-- Content -->
+            <div class="dlg-field" style="grid-column: 1 / -1;">
+                <label>Contenido / Notas</label>
+                <input pInputText [(ngModel)]="editingLocation.content" class="w-full"
+                    placeholder="Descripción opcional del contenido..." />
+            </div>
+
+            <!-- Active -->
+            <div class="dlg-field" style="grid-column: 1 / -1; display:flex; align-items:center; gap:10px;">
+                <p-inputSwitch [(ngModel)]="editingLocation.active"></p-inputSwitch>
+                <span style="font-size: 0.85rem;">
+                    {{ editingLocation.active ? 'Ubicación activa' : 'Ubicación inactiva' }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <ng-template pTemplate="footer">
+        <button class="dw-btn" (click)="showLocationEditDlg = false" [disabled]="savingLocation">
+            Cancelar
+        </button>
+        <button class="dw-btn primary" (click)="saveLocationEdit()" [disabled]="savingLocation">
+            <i [class]="savingLocation ? 'pi pi-spin pi-spinner' : 'pi pi-save'"></i>
+            <span>{{ savingLocation ? 'Guardando...' : 'Guardar cambios' }}</span>
+        </button>
+    </ng-template>
+</p-dialog>
+
+<!-- ======================== DIALOG: EDITAR BIN ======================== -->
+<p-dialog header="Editar Bin" [(visible)]="showBinEditDlg" [modal]="true" [draggable]="true" [resizable]="false"
+    [style]="{width: '420px'}" appendTo="body">
+
+    <ng-template pTemplate="header">
+        <div style="display:flex; align-items:center; gap: 8px;">
+            <i class="pi pi-box" style="color: #f9a825; font-size: 1.1rem;"></i>
+            <span style="font-weight: 700;">Editar Bin</span>
+        </div>
+    </ng-template>
+
+    <div *ngIf="editingBin" style="padding-top: 4px;">
+
+        <!-- Bin Name -->
+        <div class="dlg-field">
+            <label>Nombre del Bin</label>
+            <input pInputText [(ngModel)]="editingBin.binName" class="w-full" placeholder="Ej. BIN-001" />
+        </div>
+
+        <div class="dlg-grid">
+            <!-- Capacity -->
+            <div class="dlg-field">
+                <label>Capacidad</label>
+                <p-inputNumber [(ngModel)]="editingBin.capacity" [min]="0" placeholder="Sin límite"
+                    styleClass="w-full" />
+            </div>
+
+            <!-- Current Stock -->
+            <div class="dlg-field">
+                <label>Stock actual</label>
+                <p-inputNumber [(ngModel)]="editingBin.currentStock" [min]="0" styleClass="w-full" />
+            </div>
+        </div>
+
+        <!-- Stock bar -->
+        <div *ngIf="editingBin.capacity && editingBin.capacity > 0" class="dlg-field">
+            <label>Ocupación</label>
+            <div class="stock-bar-wrap">
+                <div class="stock-bar-inner" [style.width]="stockPercent(editingBin) + '%'"
+                    [class.warn]="stockPercent(editingBin) >= 80" [class.full]="stockPercent(editingBin) >= 100">
+                </div>
+            </div>
+            <span style="font-size: 0.75rem; color: var(--text-color-secondary);">
+                {{ editingBin.currentStock || 0 }} / {{ editingBin.capacity }}
+                ({{ stockPercent(editingBin) | number:'1.0-0' }}%)
+            </span>
+        </div>
+
+        <!-- Active -->
+        <div class="dlg-field" style="display:flex; align-items:center; gap:10px;">
+            <p-inputSwitch [(ngModel)]="editingBin.active"></p-inputSwitch>
+            <span style="font-size: 0.85rem;">
+                {{ editingBin.active ? 'Bin activo' : 'Bin inactivo' }}
+            </span>
+        </div>
+    </div>
+
+    <ng-template pTemplate="footer">
+        <button class="dw-btn" (click)="showBinEditDlg = false" [disabled]="savingBin">
+            Cancelar
+        </button>
+        <button class="dw-btn primary" (click)="saveBinEdit()" [disabled]="savingBin">
+            <i [class]="savingBin ? 'pi pi-spin pi-spinner' : 'pi pi-save'"></i>
+            <span>{{ savingBin ? 'Guardando...' : 'Guardar cambios' }}</span>
+        </button>
+    </ng-template>
+</p-dialog>
+
+<!-- ======================== DIALOG: GESTOR DE ZONAS ======================== -->
+<p-dialog [(visible)]="showZoneManagerDlg" [modal]="true" [draggable]="true" [resizable]="false"
+    [style]="{width: '480px'}" appendTo="body">
+
+    <ng-template pTemplate="header">
+        <div style="display:flex; align-items:center; gap: 8px;">
+            <i class="pi pi-palette" style="color: #7c3aed; font-size: 1.1rem;"></i>
+            <span style="font-weight: 700;">Gestionar Zonas</span>
+        </div>
+    </ng-template>
+
+    <div style="padding-top: 4px;">
+
+        <!-- Crear nueva zona -->
+        <div style="border: 1px solid var(--surface-200); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+            <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+                        letter-spacing: 0.04em; color: var(--text-color-secondary); margin-bottom: 10px;">
+                Nueva zona
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <p-colorPicker [(ngModel)]="newZoneColor" format="hex" appendTo="body"></p-colorPicker>
+                <div [style.background]="'#' + newZoneColor.replace('#','')"
+                    style="width:28px;height:28px;border-radius:6px;border:1px solid var(--surface-300);flex-shrink:0;">
+                </div>
+                <input pInputText [(ngModel)]="newZoneName" placeholder="Nombre de zona..." class="w-full"
+                    style="flex:1;" (keydown.enter)="addZone()" />
+                <button class="dw-btn primary" (click)="addZone()" [disabled]="!newZoneName.trim()"
+                    pTooltip="Agregar zona" tooltipPosition="top">
+                    <i class="pi pi-plus"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Lista de zonas -->
+        <div *ngIf="zones.length === 0"
+            style="text-align:center; padding: 24px; color: var(--text-color-secondary); font-size: 0.85rem;">
+            <i class="pi pi-palette" style="font-size:2rem; opacity:0.2; display:block; margin-bottom:8px;"></i>
+            Aún no hay zonas. Crea la primera arriba.
+        </div>
+
+        <div class="zone-list">
+            <ng-container *ngFor="let zone of zones">
+
+                <!-- Edit mode -->
+                <div *ngIf="editingZone && editingZone.id === zone.id" class="zone-item editing">
+                    <div style="display:flex; gap:8px; align-items:center; width:100%;">
+                        <p-colorPicker [(ngModel)]="editingZone.color" format="hex" appendTo="body"></p-colorPicker>
+                        <div [style.background]="'#' + editingZone.color.replace('#','')"
+                            style="width:24px;height:24px;border-radius:4px;border:1px solid var(--surface-300);flex-shrink:0;">
+                        </div>
+                        <input pInputText [(ngModel)]="editingZone.name" class="w-full" style="flex:1;"
+                            (keydown.enter)="saveZoneEdit()" (keydown.escape)="cancelZoneEdit()" />
+                        <button class="dw-btn success" style="padding:4px 10px;" (click)="saveZoneEdit()">
+                            <i class="pi pi-check"></i>
+                        </button>
+                        <button class="dw-btn" style="padding:4px 10px;" (click)="cancelZoneEdit()">
+                            <i class="pi pi-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- View mode -->
+                <div *ngIf="!editingZone || editingZone.id !== zone.id" class="zone-item">
+                    <div class="zone-color-swatch" [style.background]="'#' + zone.color.replace('#','')"></div>
+                    <span class="zone-name">{{ zone.name }}</span>
+                    <span class="zone-count">{{ countLocsByZone(zone.id) }} ubic.</span>
+                    <button class="dw-btn dw-btn-icon" style="width:28px;height:28px;" pTooltip="Editar zona"
+                        tooltipPosition="top" (click)="startEditZone(zone)">
+                        <i class="pi pi-pencil" style="font-size:0.75rem;"></i>
+                    </button>
+                    <button class="dw-btn dw-btn-icon danger" style="width:28px;height:28px;" pTooltip="Eliminar zona"
+                        tooltipPosition="top" (click)="deleteZone(zone.id)">
+                        <i class="pi pi-trash" style="font-size:0.75rem;"></i>
+                    </button>
+                </div>
+
+            </ng-container>
+        </div>
+
+    </div>
+
+    <ng-template pTemplate="footer">
+        <button class="dw-btn primary" (click)="showZoneManagerDlg = false">
+            <i class="pi pi-check"></i>
+            <span>Listo</span>
+        </button>
+    </ng-template>
+</p-dialog>

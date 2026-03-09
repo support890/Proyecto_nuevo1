@@ -68,6 +68,11 @@ export class AppMenu {
                     label: 'Nueva Ubicación',
                     icon: 'pi pi-plus-circle',
                     routerLink: ['/ubicaciones/nuevo']
+                },
+                {
+                    label: 'Diseñador de Almacén',
+                    icon: 'pi pi-map',
+                    routerLink: ['/almacen/disenador']
                 }
             ]
         }

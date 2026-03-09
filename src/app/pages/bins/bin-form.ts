@@ -5,7 +5,6 @@ import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
-import { DropdownModule } from 'primeng/dropdown';
 import { InputSwitchModule } from 'primeng/inputswitch';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
@@ -24,7 +23,6 @@ import { BinService } from '../service/bin.service';
         ButtonModule,
         InputTextModule,
         InputNumberModule,
-        DropdownModule,
         InputSwitchModule,
         ToastModule
     ],
@@ -39,20 +37,14 @@ export class BinForm implements OnInit {
 
     binData: Bin = {
         locationId: '',
-        code: '',
-        content: '',
-        quantity: 0,
-        status: 'empty',
+        binName: '',
+        capacity: undefined,
+        currentStock: 0,
         active: true
     };
 
     isEditMode: boolean = false;
-
-    statusOptions = [
-        { label: 'Vacío', value: 'empty' },
-        { label: 'Parcial', value: 'partial' },
-        { label: 'Lleno', value: 'full' }
-    ];
+    saving: boolean = false;
 
     constructor(
         private binService: BinService,
@@ -68,28 +60,33 @@ export class BinForm implements OnInit {
         }
     }
 
-    saveBin(): void {
-        if (!this.validateBin()) {
+    async saveBin(): Promise<void> {
+        if (!this.binData.binName?.trim()) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Validación',
+                detail: 'El nombre del bin es requerido'
+            });
             return;
         }
 
+        this.saving = true;
         try {
             if (this.isEditMode) {
-                this.binService.updateBin(this.binData.id!, this.binData);
+                await this.binService.updateBin(this.binData.id!, this.binData);
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Éxito',
                     detail: 'Bin actualizado correctamente'
                 });
             } else {
-                this.binService.createBin(this.binData);
+                await this.binService.createBin(this.binData);
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Éxito',
                     detail: 'Bin creado correctamente'
                 });
             }
-            
             this.onSave.emit();
             this.closeDialog();
         } catch (error) {
@@ -98,29 +95,9 @@ export class BinForm implements OnInit {
                 summary: 'Error',
                 detail: 'Error al guardar el bin'
             });
+        } finally {
+            this.saving = false;
         }
-    }
-
-    validateBin(): boolean {
-        if (!this.binData.code) {
-            this.messageService.add({
-                severity: 'warn',
-                summary: 'Validación',
-                detail: 'El código del bin es requerido'
-            });
-            return false;
-        }
-
-        if (!this.binData.status) {
-            this.messageService.add({
-                severity: 'warn',
-                summary: 'Validación',
-                detail: 'El estado del bin es requerido'
-            });
-            return false;
-        }
-
-        return true;
     }
 
     closeDialog(): void {
