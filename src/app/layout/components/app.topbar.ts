@@ -65,7 +65,7 @@ import { AuthService } from '@/pages/service/auth.service';
                         <img alt="avatar" src="/layout/images/avatar.png" />
                         <span class="profile-details">
                             <span class="profile-name">{{ currentUser()?.name }}</span>
-                            <span class="profile-job">{{ currentUser()?.role }}</span>
+                            <span class="profile-name">{{ currentUser()?.role }}</span>
                         </span>
                         <i class="pi pi-angle-down"></i>
                     </button>
